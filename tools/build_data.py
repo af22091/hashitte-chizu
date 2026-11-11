@@ -12,6 +12,7 @@ import numpy as np
 import shapely
 from shapely.geometry import shape, Polygon, MultiPolygon
 from shapely import affinity
+from shapely.ops import polylabel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "japan.geojson")
@@ -19,11 +20,12 @@ URL = "https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson"
 OUT = os.path.join(HERE, "..", "data", "prefectures.json")
 
 KX = math.cos(math.radians(37))   # 地図全体で共通の経度補正
+OKI_ISLAND_MIN = 0.012            # 沖縄は宮古・石垣などの島も残す
 ISLAND_MIN = 0.04                 # これより小さい島は省く
 PIECE_TOL = 0.045                 # ピースの簡略化(度)。大きいほどパズル風
 ROUTE_SIMP = 0.02                 # 走る形の簡略化(最長辺に対する比)
 PALETTE_N = 5
-X0, X1, Y0, Y1 = 126.5 * KX, 146.3 * KX, 27.8, 45.8
+X0, X1, Y0, Y1 = 122.4 * KX, 146.3 * KX, 24.0, 45.8   # 沖縄(与那国島まで)も実際の位置に入れる
 S = 50.0                          # 地図の座標倍率
 OKI = "沖縄県"
 
@@ -56,20 +58,14 @@ def main():
         g = affinity.scale(g, xfact=KX, yfact=1.0, origin=(0, 0))
         parts = list(g.geoms) if isinstance(g, MultiPolygon) else [g]
         top = max(p.area for p in parts)
+        lim = OKI_ISLAND_MIN if n == OKI else ISLAND_MIN
         keep = [Polygon(p.exterior) for p in parts
-                if (p.area > ISLAND_MIN or p.area == top) and (n == OKI or p.centroid.y > 30.0)]
+                if (p.area > lim or p.area == top) and (n == OKI or p.centroid.y > 30.0)]
         raw.append(MultiPolygon(keep))
     arr = np.array(raw, dtype=object)
     assert shapely.coverage_is_valid(arr), "県境が重なっています"
     simp = list(shapely.coverage_simplify(arr, PIECE_TOL))
     pieces = dict(zip(names, simp))
-
-    # --- 沖縄は枠に入れて太平洋側へ ---
-    mp = max(pieces[OKI].geoms, key=lambda p: p.area)
-    c = mp.centroid
-    tgt = (134.0 * KX, 29.6)
-    pieces[OKI] = affinity.translate(affinity.scale(MultiPolygon([mp]), 1.6, 1.6, origin=(c.x, c.y)),
-                                     tgt[0] - c.x, tgt[1] - c.y)
 
     # --- 隣り合う県が違う色になるよう色分け ---
     adj = {n: {m for m in names if m != n and pieces[n].buffer(1e-6).intersects(pieces[m])} for n in names}
@@ -79,15 +75,14 @@ def main():
         col[n] = next((i for i in range(PALETTE_N) if i not in used), PALETTE_N - 1)
 
     out = {"viewBox": [0, 0, round((X1 - X0) * S, 1), round((Y1 - Y0) * S, 1)],
-           "inset": [round((132.6 * KX - X0) * S, 1), round((Y1 - 30.8) * S, 1),
-                     round(2.8 * KX * S, 1), round(2.4 * S, 1)],
+           "inset": None,
            "prefs": []}
     for i, f in enumerate(feats):
         n = f["properties"]["nam_ja"]
         g = pieces[n]
         d = "".join(ring_d(list(p.exterior.coords)) for p in g.geoms)
         main_p = max(g.geoms, key=lambda p: p.area)
-        lp = main_p.representative_point()
+        lp = polylabel(main_p, tolerance=0.01)          # いちばん中心に近い点(重心より形の真ん中に来る)
         lx, ly = px(lp.x, lp.y)
 
         # --- 走る形(本土の輪郭を正規化) ---

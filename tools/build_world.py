@@ -13,6 +13,7 @@ import numpy as np
 import shapely
 from shapely.geometry import shape, Polygon, MultiPolygon
 from shapely import affinity
+from shapely.ops import polylabel
 from shapely.ops import transform
 from pyproj import Transformer
 
@@ -91,7 +92,7 @@ def main():
             pts = [px(x, y) for x, y in list(p.exterior.coords)[:-1]]
             d += "M" + "L".join(f"{x:.1f},{y:.1f}" for x, y in pts) + "Z"
         main_p = max(polys, key=lambda p: p.area)
-        lp = main_p.representative_point(); lx, ly = px(lp.x, lp.y)
+        lp = polylabel(main_p, tolerance=0.01); lx, ly = px(lp.x, lp.y)
         bw = (main_p.bounds[2] - main_p.bounds[0]) * S
 
         # --- 走る形: 最大の陸地の輪郭(緯度経度のまま扱い、経度は緯度で縮める) ---

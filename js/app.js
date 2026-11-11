@@ -201,7 +201,7 @@
     const el = document.querySelector(`#board .piece[data-id="${p.id}"]`); if (!el) return;
     const bb = el.getBBox(), cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
     const z = Math.min(8, Math.max(1.6, Math.min(base.w / (bb.width * 3.2), base.h / (bb.height * 3.2))));
-    view.w = base.w / z; view.h = base.h / z; view.x = cx - view.w / 2; view.y = cy - view.h / 2;
+    view.w = base.w / z; view.h = base.h / z; view.x = cx - view.w / 2; view.y = cy - view.h * 0.36;   // 下のシートに隠れないよう、少し上寄りに表示
     clampView(); applyView(); openSheet(p.id);
   }
   function doSearch() {
