@@ -310,16 +310,46 @@
     planLayer && planLayer.clearLayers(); runLayer && runLayer.clearLayers();
     show('board'); renderBoard();
   }
+  /* 待ち時間の演出: 走る形が線で描かれ、その上を点が走る。ヒントも入れ替わる */
+  const TIPS = [
+    '赤い線が、これから走る道です。青い点線が目標の形。',
+    '案は3つ作ります。再現度が高いものを選びましょう。',
+    '大きさを「小」にすると、短い距離で走れます。',
+    '道が少ない場所だと、形が崩れやすくなります。',
+    '走り終えると、走った場所の地名も記録されます。',
+    'ゆっくり歩いても完成します。ただしコースは順番どおりに。',
+    'スタート地点に着くと、自動で記録が始まります。',
+  ];
+  let tipTimer = null, tipI = 0;
+  function outlineSvg(outline) {
+    const pts = outline.map(([x, y]) => [50 + x * 76, 50 - y * 76]);
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('') + 'Z';
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">` +
+      `<path d="${d}" fill="rgba(232,56,79,.08)" stroke="#dbe5ec" stroke-width="2.5" stroke-linejoin="round"/>` +
+      `<path id="loader-path" class="loader-line" pathLength="1" d="${d}" fill="none" stroke="#e8384f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<circle r="3.6" fill="#1e88e5" stroke="#fff" stroke-width="1.6"><animateMotion dur="2.6s" repeatCount="indefinite" calcMode="linear"><mpath href="#loader-path"/></animateMotion></circle></svg>`;
+  }
+  function startLoader() {
+    $('#loader-shape').innerHTML = plan.pref ? outlineSvg(plan.pref.outline) : '';
+    tipI = Math.floor(Math.random() * TIPS.length); $('#loader-tip').textContent = TIPS[tipI];
+    clearInterval(tipTimer);
+    tipTimer = setInterval(() => {
+      const el = $('#loader-tip'); el.classList.add('out');
+      setTimeout(() => { tipI = (tipI + 1) % TIPS.length; el.textContent = TIPS[tipI]; el.classList.remove('out'); }, 250);
+    }, 4000);
+  }
+  function stopLoader() { clearInterval(tipTimer); tipTimer = null; }
   function progress(f, text) {
-    $('#plan-prog').hidden = false;
+    if ($('#plan-prog').hidden) { $('#plan-prog').hidden = false; startLoader(); }
     $('#plan-prog .bar i').style.width = Math.round(f * 100) + '%';
-    $('#plan-prog span').textContent = text || '';
+    $('#loader-pct').textContent = Math.round(f * 100) + '%';
+    if (text) $('#loader-phase').textContent = text;
   }
   $('#btn-make').onclick = makeCourse;
   async function makeCourse() {
     if (plan.busy) return;
     const sizeM = sizeOf(plan.pref, plan.size), [lat0, lon0] = plan.start, src = $('#src').value;
-    plan.busy = true; $('#btn-make').disabled = true; $('#plan-msg').textContent = '';
+    plan.busy = true; $('#btn-make').disabled = true; $('#btn-make').textContent = '作成中…'; $('#plan-msg').textContent = '';
     $('#plan-results').hidden = true; planLayer.clearLayers();
     try {
       let g;
@@ -341,7 +371,7 @@
     } catch (e) {
       $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
     } finally {
-      plan.busy = false; $('#btn-make').disabled = false; $('#plan-prog').hidden = true;
+      plan.busy = false; $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#plan-prog').hidden = true; stopLoader();
     }
   }
   /* 地図を合わせるときの余白(パネルに隠れない位置に収める) */

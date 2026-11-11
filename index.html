@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261111d">
+<link rel="stylesheet" href="css/style.css?v=20261111e">
 </head>
 <body>
 <header id="top">
@@ -69,7 +69,14 @@
         </select>
       </div>
       <button id="btn-make" class="primary opt">コースを作る</button>
-      <div id="plan-prog" hidden><div class="bar"><i></i></div><span class="muted"></span></div>
+      <div id="plan-prog" hidden>
+        <div class="loader">
+          <div id="loader-shape" aria-hidden="true"></div>
+          <div class="loader-text"><b id="loader-phase">準備中…</b><span id="loader-tip"></span></div>
+        </div>
+        <div class="bar"><i></i></div>
+        <div class="loader-pct muted"><span id="loader-pct">0%</span></div>
+      </div>
       <div id="plan-results" hidden>
         <div id="chips"></div>
         <div id="plan-info" class="muted"></div>
@@ -122,8 +129,8 @@ window.addEventListener('error', function (e) {
 });
 </script>
 <script src="lib/leaflet/leaflet.js"></script>
-<script src="data/embedded.js?v=20261111d"></script>
-<script src="js/route.js?v=20261111d"></script>
-<script src="js/app.js?v=20261111d"></script>
+<script src="data/embedded.js?v=20261111e"></script>
+<script src="js/route.js?v=20261111e"></script>
+<script src="js/app.js?v=20261111e"></script>
 </body>
 </html>

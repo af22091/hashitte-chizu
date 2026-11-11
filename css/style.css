@@ -110,7 +110,17 @@ main { position: relative; flex: 1; min-height: 0; }
 select { padding: 9px 10px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: #fff; max-width: 100%; font-weight: 500; }
 .bar { height: 8px; background: var(--chalk); border-radius: 4px; overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--route); border-radius: 4px; transition: width .2s; }
-#plan-prog { display: flex; flex-direction: column; gap: 4px; }
+#plan-prog { display: flex; flex-direction: column; gap: 8px; background: var(--chalk); border-radius: var(--r-md); padding: 12px; }
+.loader { display: flex; gap: 14px; align-items: center; }
+#loader-shape { width: 84px; height: 84px; flex: none; background: #fff; border-radius: 16px; padding: 4px; }
+#loader-shape svg { width: 100%; height: 100%; display: block; }
+.loader-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: trace 2.6s linear infinite; }
+@keyframes trace { 0% { stroke-dashoffset: 1; } 90%, 100% { stroke-dashoffset: 0; } }
+.loader-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.loader-text b { font-size: 14px; font-weight: 900; line-height: 1.4; }
+#loader-tip { font-size: 13px; color: var(--ink2); font-weight: 500; line-height: 1.5; min-height: 3em; transition: opacity .25s; }
+#loader-tip.out { opacity: 0; }
+.loader-pct { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 #chips { display: flex; gap: 8px; margin-bottom: 8px; }
 #chips button { flex: 1; padding: 9px 6px; font-size: 13px; line-height: 1.4; border-radius: 12px; }
 #chips button.on { border-color: var(--route); background: #fff0f2; color: var(--route-d); }
@@ -162,5 +172,6 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+  .loader-line { stroke-dashoffset: 0; }
   .big-trail .trail-line { stroke-dashoffset: 0; }
 }
