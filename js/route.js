@@ -121,33 +121,59 @@
 
   /* ---------- OpenStreetMap(Overpass) ---------- */
   const OVERPASS = [
+    'https://overpass.osm.jp/api/interpreter',            // 日本のサーバー(日本の地域に近い)
     'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
     'https://overpass.private.coffee/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
   ];
-  function overpassQuery(lat, lon, radiusM) {
+  /* light=true は、路地(service)や私道などを省いた軽いデータ。密集した都市で重いときの再試行用 */
+  function overpassQuery(lat, lon, radiusM, light) {
     const dLat = radiusM / M_PER_DEG_LAT, dLon = radiusM / (M_PER_DEG_LON * Math.cos(lat * Math.PI / 180));
     const bbox = [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(6)).join(',');
-    const hw = 'footway|path|pedestrian|residential|living_street|service|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|track|cycleway|road';
+    const hw = light
+      ? 'footway|path|pedestrian|residential|living_street|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link'
+      : 'footway|path|pedestrian|residential|living_street|service|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|track|cycleway|road';
     return `[out:json][timeout:60];way["highway"~"^(${hw})$"]["foot"!="no"]["access"!~"private|no"]["service"!~"driveway|parking_aisle"](${bbox});(._;>;);out skel qt;`;
   }
+  /* 1回分の取得: 複数のサーバーに、時間をずらして同時に問い合わせ、最初に成功したものを使う */
+  function raceFetch(body, endpoints, opts) {
+    const timeoutMs = opts.timeoutMs || 60000, stagger = opts.staggerMs == null ? 6000 : opts.staggerMs;
+    return new Promise((resolve, reject) => {
+      const ctls = [], errs = []; let started = 0, finished = 0, done = false, timer = null;
+      const startNext = () => {
+        if (done || started >= endpoints.length) return;
+        const url = endpoints[started++]; let host = url; try { host = new URL(url).host; } catch (e) { /* そのまま */ }
+        if (opts.onStatus) opts.onStatus(`道路データを取得中…（${host}）`);
+        const ctl = new AbortController(); ctls.push(ctl); let timedOut = false;
+        const t = setTimeout(() => { timedOut = true; ctl.abort(); }, timeoutMs);
+        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal })
+          .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 429 ? '（混雑中）' : '')); return res.json(); })
+          .then(j => { if (!done) { done = true; clearTimeout(timer); ctls.forEach(c => { if (c !== ctl) c.abort(); }); resolve(j); } })
+          .catch(e => {
+            if (done) return;
+            errs.push(`${host}: ${timedOut ? Math.round(timeoutMs / 1000) + '秒で時間切れ' : (e.message || '接続できません')}`);
+            finished++; clearTimeout(timer);
+            if (started < endpoints.length) startNext();               // 失敗したらすぐ次のサーバーへ
+            else if (finished >= started) reject(new Error(errs.join(' ／ ')));
+          })
+          .finally(() => clearTimeout(t));
+        if (started < endpoints.length) { clearTimeout(timer); timer = setTimeout(startNext, stagger); }   // 遅いときは待たずに次も並行で開始
+      };
+      startNext();
+    });
+  }
   async function fetchRoads(lat, lon, radiusM, opts = {}) {
-    const body = 'data=' + encodeURIComponent(overpassQuery(lat, lon, radiusM));
-    const timeoutMs = opts.timeoutMs || 45000, errs = [];
-    for (const url of (opts.endpoints || OVERPASS)) {
-      let host = url; try { host = new URL(url).host; } catch (e) { /* そのまま */ }
-      if (opts.onStatus) opts.onStatus(`道路データを取得中…（${host}）`);
-      const ctl = new AbortController(); let timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, timeoutMs);
-      try {
-        const res = await fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl.signal });
-        if (!res.ok) throw new Error('HTTP ' + res.status + (res.status === 429 ? '（混雑中）' : ''));
-        return await res.json();
-      } catch (e) {
-        errs.push(`${host}: ${timedOut ? Math.round(timeoutMs / 1000) + '秒で時間切れ' : (e.message || '接続できません')}`);
-      } finally { clearTimeout(timer); }
+    const eps = opts.endpoints || OVERPASS;
+    const attempts = opts.single ? [[radiusM, false]] : [[radiusM, false], [radiusM * 0.8, true]];
+    const errs = [];
+    for (let i = 0; i < attempts.length; i++) {
+      const [r, light] = attempts[i];
+      if (i > 0 && opts.onStatus) opts.onStatus('うまく取れないため、軽いデータで再挑戦中…');
+      try { return await raceFetch('data=' + encodeURIComponent(overpassQuery(lat, lon, r, light)), eps, opts); }
+      catch (e) { errs.push(e.message); }
     }
-    throw new Error('道路データを取得できませんでした（' + errs.join(' ／ ') + '）');
+    throw new Error('道路データを取得できませんでした（' + errs[errs.length - 1] + '）');
   }
   function buildGraphFromOverpass(json, lat0, lon0) {
     const g = new Graph(), coords = new Map(), idx = new Map();
