@@ -145,7 +145,7 @@
   function clampView() {
     view.w = Math.min(base.w, Math.max(base.w / 14, view.w)); view.h = view.w * base.h / base.w;
     view.x = Math.min(base.x + base.w - view.w, Math.max(base.x, view.x));
-    view.y = Math.min(base.y + base.h - view.h, Math.max(base.y, view.y));
+    view.y = Math.min(base.y + base.h - view.h * (view.w < base.w ? 0.6 : 1), Math.max(base.y, view.y));   // 拡大中は下に余白を許す(シートに隠れる端の県を見せるため)
   }
   const svgPt = (cx, cy) => {
     const svg = $('#board'), pt = svg.createSVGPoint(); pt.x = cx; pt.y = cy;
@@ -200,7 +200,7 @@
   function focusPref(p) {
     const el = document.querySelector(`#board .piece[data-id="${p.id}"]`); if (!el) return;
     const bb = el.getBBox(), cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
-    const z = Math.min(8, Math.max(1.6, Math.min(base.w / (bb.width * 3.2), base.h / (bb.height * 3.2))));
+    const z = Math.min(12, Math.max(1.6, Math.min(base.w / (bb.width * 3.2), base.h / (bb.height * 3.2))));
     view.w = base.w / z; view.h = base.h / z; view.x = cx - view.w / 2; view.y = cy - view.h * 0.36;   // 下のシートに隠れないよう、少し上寄りに表示
     clampView(); applyView(); openSheet(p.id);
   }
