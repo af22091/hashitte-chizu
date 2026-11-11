@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e88e5">
+<title>はしって地図あつめ</title>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/style.css?v=20261111b">
+</head>
+<body>
+<header id="top">
+  <button id="btn-home" class="icon" aria-label="モード選択へ" title="モード選択へ" hidden>◀</button>
+  <h1>はしって地図あつめ</h1>
+  <div id="counter" title="完成した数" hidden><b id="count-done">0</b> / <span id="count-total">47</span></div>
+  <button id="btn-menu" class="icon" aria-label="メニュー">⋯</button>
+  <div id="menu" hidden>
+    <button id="menu-list">記録一覧（走った場所）</button>
+    <button id="menu-export">記録を書き出す</button>
+    <button id="menu-import">記録を読み込む</button>
+    <button id="menu-reset" class="danger">すべて消す</button>
+    <input type="file" id="file-import" accept="application/json" hidden>
+  </div>
+</header>
+
+<main>
+  <!-- 0. モード選択 -->
+  <section id="screen-home" class="screen active">
+    <p class="home-lead">どの地図を完成させますか？</p>
+    <div id="home-cards"><p class="muted" style="padding:16px">読み込み中…（このまま変わらないときは Ctrl+F5 で再読み込みしてください）</p></div>
+  </section>
+
+  <!-- ① パズル盤 -->
+  <section id="screen-board" class="screen">
+    <div id="board-tools">
+      <input id="search" type="search" list="search-list" autocomplete="off" placeholder="名前で探す">
+      <datalist id="search-list"></datalist>
+      <button id="z-out" aria-label="縮小">−</button><button id="z-in" aria-label="拡大">＋</button><button id="z-reset">全体</button>
+    </div>
+    <div id="board-wrap"><svg id="board" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="地図パズル"></svg></div>
+    <p id="board-hint" class="muted">走りたい県をタップしてください</p>
+  </section>
+
+  <!-- ②③ コース作成・走行 -->
+  <section id="screen-map" class="screen">
+    <div id="map"></div>
+
+    <div id="panel-plan" class="panel" hidden>
+      <div class="row head"><button class="link" id="plan-back">← 戻る</button><b id="plan-title"></b></div>
+      <div class="row opt">
+        <span class="lbl">大きさ</span>
+        <div class="seg" id="size-seg">
+          <button data-s="s">小</button><button data-s="m" class="on">中</button><button data-s="l">大</button>
+        </div>
+        <span id="plan-est" class="muted"></span>
+      </div>
+      <div class="row opt">
+        <button id="btn-here">現在地をスタートに</button>
+        <span class="muted">地図をタップしても変更できます</span>
+      </div>
+      <div class="row opt">
+        <label class="lbl" for="src">道路データ</label>
+        <select id="src">
+          <option value="osm">実際の道路（OpenStreetMap）</option>
+          <option value="demo">デモ（疑似道路・ネット不要）</option>
+        </select>
+      </div>
+      <button id="btn-make" class="primary opt">コースを作る</button>
+      <div id="plan-prog" hidden><div class="bar"><i></i></div><span class="muted"></span></div>
+      <div id="plan-results" hidden>
+        <div id="chips"></div>
+        <div id="plan-info" class="muted"></div>
+        <button id="btn-go" class="primary">このコースで走る</button>
+      </div>
+      <button class="link" id="btn-opts" hidden>← 条件を変える（大きさ・場所・道路）</button>
+      <div id="plan-msg" class="msg"></div>
+    </div>
+
+    <div id="panel-run" class="panel" hidden>
+      <div class="row head"><button class="link" id="run-back">← 戻る</button><b id="run-title"></b></div>
+      <div class="stats">
+        <div><small>距離</small><b id="st-dist">0.00 km</b></div>
+        <div><small>時間</small><b id="st-time">0:00</b></div>
+        <div><small>進み具合</small><b id="st-cov">0%</b></div>
+      </div>
+      <div id="run-status" class="status"></div>
+      <div class="row sim">
+        <label><input type="checkbox" id="sim"> シミュレーション走行（開発用）</label>
+        <select id="sim-speed">
+          <option value="12">ゆっくり</option><option value="40" selected>ふつう</option><option value="120">はやい</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="btn-run" class="primary">スタート</button>
+        <button id="btn-quit">やめる</button>
+      </div>
+      <div id="run-msg" class="msg"></div>
+    </div>
+  </section>
+</main>
+
+<!-- 県を選んだときの下からのシート -->
+<div id="sheet" hidden>
+  <div class="grab"></div>
+  <div id="sheet-body"></div>
+</div>
+
+<!-- 完成・記録の表示 -->
+<div id="modal" hidden>
+  <div class="card" id="modal-card"></div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script>
+window.addEventListener('error', function (e) {
+  var el = document.getElementById('home-cards');
+  if (el) el.innerHTML = '<p style="padding:16px;color:#b00020">エラー: ' + String(e.message).replace(/</g,'&lt;') + '<br>' + String(e.filename || '').split('/').pop() + ':' + e.lineno + '</p>';
+});
+</script>
+<script src="lib/leaflet/leaflet.js"></script>
+<script src="data/embedded.js?v=20261111b"></script>
+<script src="js/route.js?v=20261111b"></script>
+<script src="js/app.js?v=20261111b"></script>
+</body>
+</html>
