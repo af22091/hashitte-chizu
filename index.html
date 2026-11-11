@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1e88e5">
 <title>はしって地図あつめ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261111b">
+<link rel="stylesheet" href="css/style.css?v=20261111c">
 </head>
 <body>
 <header id="top">
@@ -26,7 +28,8 @@
 <main>
   <!-- 0. モード選択 -->
   <section id="screen-home" class="screen active">
-    <p class="home-lead">どの地図を完成させますか？</p>
+    <h2 class="home-lead">どの地図を走る？</h2>
+    <p class="home-sub">走った道が線になって、地図のピースが埋まっていきます。</p>
     <div id="home-cards"><p class="muted" style="padding:16px">読み込み中…（このまま変わらないときは Ctrl+F5 で再読み込みしてください）</p></div>
   </section>
 
@@ -119,8 +122,8 @@ window.addEventListener('error', function (e) {
 });
 </script>
 <script src="lib/leaflet/leaflet.js"></script>
-<script src="data/embedded.js?v=20261111b"></script>
-<script src="js/route.js?v=20261111b"></script>
-<script src="js/app.js?v=20261111b"></script>
+<script src="data/embedded.js?v=20261111c"></script>
+<script src="js/route.js?v=20261111c"></script>
+<script src="js/app.js?v=20261111c"></script>
 </body>
 </html>

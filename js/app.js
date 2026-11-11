@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const RE = window.RouteEngine;
-  const COLORS = ['#e8453c', '#f6c928', '#2fa36b', '#7b4fb3', '#3b8fd9'];
+  const COLORS = ['#ff6b6b', '#ffc145', '#2ec4a6', '#9b7bf2', '#3da5f5'];
   const SIZES = { s: 1000, m: 1500, l: 2000 };            // 形の最長辺(m)
   const STORE_KEY = 'hashitte-nihon-v1';
   const DEFAULT_START = [35.6762, 139.6503];              // 場所が未設定のときの地図の中心(東京)
@@ -65,7 +65,7 @@
     const d = pts => pts.map((p, i) => (i ? 'L' : 'M') + (ox + (p[0] - x0) * k).toFixed(1) + ',' + (size - (oy + (p[1] - y0) * k)).toFixed(1)).join('');
     return `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">` +
       (B.length ? `<path d="${d(B)}Z" fill="none" stroke="#b9c3cd" stroke-width="2" stroke-dasharray="4 4" stroke-linejoin="round"/>` : '') +
-      `<path d="${d(A)}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      `<path class="trail-line" pathLength="1" d="${d(A)}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
 
   /* ---------- データ読み込み ---------- */
