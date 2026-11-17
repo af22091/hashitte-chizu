@@ -13,9 +13,9 @@
   /* ---------- モード(日本 / 世界) ---------- */
   const MODES = {
     jp: { key: 'jp', title: 'はしって日本地図', home: '日本', file: 'data/prefectures.json', runs: 'runs', unit: '県', font: 8.5,
-      hint: '走りたい県をタップしてください。ピンチやボタンで拡大、検索もできます。', searchPh: '県の名前で探す' },
+      hint: '走りたい県をタップ。ピンチで拡大もできます', searchPh: '県の名前で探す' },
     world: { key: 'world', title: 'はしって世界地図', home: '世界', file: 'data/world.json', runs: 'worldRuns', unit: '国', font: 7,
-      hint: '走りたい国をタップしてください。ピンチやボタンで拡大、検索もできます。', searchPh: '国の名前で探す(日本語・英語)' },
+      hint: '走りたい国をタップ。ピンチで拡大・検索もできます', searchPh: '国の名前で探す(日本語・英語)' },
   };
   const MAX_SIZE_M = 3000;                                 // 細長い国で拡大しても、道路取得が重くならない上限
   let cur = null;                                          // いま開いているモード('jp' / 'world' / null=ホーム)
@@ -260,14 +260,28 @@
   function ensureMap() {
     if (map) return;
     map = L.map('map', { zoomControl: true });
-    /* すっきりしたカラー地図(Google マップに近い見た目)と、コースが目立つ淡色地図を切り替えられる */
-    const attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>';
-    const mk = k => L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${k}/{z}/{x}/{y}{r}.png`, { maxZoom: 20, maxNativeZoom: 19, subdomains: 'abcd', attribution: attr });
-    const bases = { 'カラー': mk('voyager'), '淡色': mk('light_all') };
-    let pick = 'カラー'; try { pick = localStorage.getItem('hashitte-basemap') || pick; } catch (e) { /* 既定 */ }
-    (bases[pick] || bases['カラー']).addTo(map);
+    /* 地図の見た目: きれい(ベクター地図 OpenFreeMap) / 標準(OSM) / 淡色(国土地理院・日本のみ)。
+       ベクター地図が読み込めない端末では、自動で標準に切り替える */
+    const bases = {};
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
+    const gsi = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', { maxZoom: 19, maxNativeZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>' });
+    let vec = null, webgl = false;
+    try { webgl = !!document.createElement('canvas').getContext('webgl'); } catch (e) { /* なし */ }
+    if (webgl && window.maplibregl && L.maplibreGL) {
+      vec = L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/liberty', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
+      bases['きれい'] = vec;
+    }
+    bases['標準'] = osm; bases['淡色（日本）'] = gsi;
+    let pick = vec ? 'きれい' : '標準'; try { pick = localStorage.getItem('hashitte-basemap2') || pick; } catch (e) { /* 既定 */ }
+    if (!bases[pick]) pick = '標準';
+    bases[pick].addTo(map);
+    if (vec && pick === 'きれい') {                       // 読み込みに失敗したら標準へ
+      let ok = false; const fallback = () => { if (!ok && map.hasLayer(vec)) { map.removeLayer(vec); osm.addTo(map); toast('きれいな地図を読み込めなかったため、標準の地図にしました'); } };
+      try { const m = vec.getMaplibreMap(); m.on('load', () => { ok = true; }); m.on('error', () => { if (!ok) fallback(); }); } catch (e) { fallback(); }
+      setTimeout(fallback, 12000);
+    }
     L.control.layers(bases, null, { position: 'topright', collapsed: true }).addTo(map);
-    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap', e.name); } catch (err) { /* なし */ } });
+    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap2', e.name); } catch (err) { /* なし */ } });
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
     map.setView(s, 15);
@@ -687,7 +701,7 @@
   };
 
   /* ---------- 起動 ---------- */
-  if (!DEV) { $('.row.sim').hidden = true; $('#src option[value="demo"]').remove(); }
+  if (!DEV) { $('.row.sim').hidden = true; $('#src option[value="demo"]').remove(); $('.src-row').hidden = true; }
   loadAll().then(() => { renderHome(); show('home'); }).catch(e => {
     $('#home-cards').innerHTML = '<p class="muted" style="padding:16px">データを読み込めませんでした。フォルダで `python -m http.server` を実行し、http://localhost:8000 で開いてください。 ' + esc(e.message) + '</p>';
   });

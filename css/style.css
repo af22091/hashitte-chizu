@@ -11,7 +11,7 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
-  font-family: var(--font); color: var(--ink); display: flex; flex-direction: column;
+  font-feature-settings: "palt"; font-family: var(--font); color: var(--ink); display: flex; flex-direction: column;
   background: var(--sea); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased;
 }
 button, select, input { font: inherit; color: inherit; }
@@ -185,3 +185,48 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 #game[hidden] { display: none; }
 .leaflet-control-layers { border-radius: 12px !important; border: 0 !important; box-shadow: var(--shadow) !important; font-family: var(--font); }
 .leaflet-bar { border: 0 !important; box-shadow: var(--shadow) !important; border-radius: 12px !important; overflow: hidden; }
+
+/* ---------- スマホ向けの調整 ---------- */
+@supports (height: 100dvh) { html, body { height: 100dvh; } }
+#top h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.here-row { display: flex; flex-direction: column; gap: 4px; }
+#btn-here { width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; }
+.here-row .muted { font-size: 12px; }
+.src-row[hidden] { display: none; }
+.size-row { flex-wrap: nowrap; }
+@media (max-width: 520px) {
+  #top { gap: 8px; padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); }
+  #top h1 { font-size: 16px; }
+  button.icon { width: 38px; height: 38px; font-size: 17px; }
+  #counter { padding: 4px 10px; font-size: 12px; } #counter b { font-size: 17px; }
+  #menu { top: 52px; right: 8px; }
+  .home-lead { font-size: 24px; padding: 18px 16px 2px; } .home-sub { padding: 0 16px 2px; font-size: 13px; }
+  #home-cards { padding: 12px 14px 24px; gap: 14px; }
+  .mode-thumb { height: 150px; }
+  #board-tools { padding: 8px 8px 0; gap: 6px; }
+  #board-tools input { padding: 10px 14px; font-size: 16px; }   /* 16px未満だとiPhoneで入力時に勝手に拡大される */
+  #board-tools button { padding: 9px 11px; }
+  #board-hint { font-size: 12px; padding: 2px 12px 8px; }
+  .panel { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 62%; padding: 10px 12px 12px; gap: 10px; border-radius: 20px; }
+  .row.head b { font-size: 16px; }
+  .lbl { min-width: 0; }
+  .seg button { padding: 8px 16px; }
+  #plan-est { font-size: 12px; }
+  #btn-make, #btn-go { padding: 14px; font-size: 16px; border-radius: 14px; }
+  #plan-prog { padding: 10px; gap: 6px; }
+  #loader-shape { width: 64px; height: 64px; border-radius: 12px; }
+  .loader { gap: 10px; }
+  #loader-tip { min-height: 0; font-size: 12px; }
+  .loader-text b { font-size: 13px; }
+  #chips button { padding: 8px 4px; font-size: 12px; }
+  .stats b { font-size: 22px; }
+  #sheet { border-radius: 22px 22px 0 0; padding: 8px 16px max(16px, env(safe-area-inset-bottom)); }
+  .sheet-title h2 { font-size: 22px; }
+  .trail-prev { width: 92px; height: 92px; }
+  #modal .card { padding: 16px; border-radius: 22px; }
+  #modal .big-trail { height: 230px; }
+  .leaflet-control-zoom { display: none; }               /* スマホは指で拡大するので、＋−ボタンは隠して地図を広く */
+}
+
+#plan-prog[hidden], #plan-results[hidden] { display: none; }
+.lbl { white-space: nowrap; }

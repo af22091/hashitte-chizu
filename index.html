@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261117a">
+<link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
+<link rel="stylesheet" href="css/style.css?v=20261117b">
 </head>
 <body>
 <header id="top">
@@ -51,18 +52,18 @@
 
     <div id="panel-plan" class="panel" hidden>
       <div class="row head"><button class="link" id="plan-back">← 戻る</button><b id="plan-title"></b></div>
-      <div class="row opt">
+      <div class="row opt size-row">
         <span class="lbl">大きさ</span>
         <div class="seg" id="size-seg">
           <button data-s="s">小</button><button data-s="m" class="on">中</button><button data-s="l">大</button>
         </div>
         <span id="plan-est" class="muted"></span>
       </div>
-      <div class="row opt">
-        <button id="btn-here">現在地をスタートに</button>
-        <span class="muted">地図をタップしても変更できます</span>
+      <div class="opt here-row">
+        <button id="btn-here">📍 現在地をスタートにする</button>
+        <span class="muted">地図をタップして、好きな場所を指定することもできます</span>
       </div>
-      <div class="row opt">
+      <div class="row opt src-row">
         <label class="lbl" for="src">道路データ</label>
         <select id="src">
           <option value="osm">実際の道路（OpenStreetMap）</option>
@@ -131,11 +132,13 @@ window.addEventListener('error', function (e) {
 });
 </script>
 <script src="lib/leaflet/leaflet.js"></script>
-<script src="js/music.js?v=20261117a"></script>
-<script src="js/trivia.js?v=20261117a"></script>
-<script src="js/game.js?v=20261117a"></script>
-<script src="data/embedded.js?v=20261117a"></script>
-<script src="js/route.js?v=20261117a"></script>
-<script src="js/app.js?v=20261117a"></script>
+<script src="lib/maplibre/maplibre-gl.js"></script>
+<script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
+<script src="js/music.js?v=20261117b"></script>
+<script src="js/trivia.js?v=20261117b"></script>
+<script src="js/game.js?v=20261117b"></script>
+<script src="data/embedded.js?v=20261117b"></script>
+<script src="js/route.js?v=20261117b"></script>
+<script src="js/app.js?v=20261117b"></script>
 </body>
 </html>
