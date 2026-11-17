@@ -744,7 +744,12 @@
     $('#nav-acc').textContent = 'GPS'; $('#nav-run').textContent = $('#btn-run').textContent;
     try {
       const m = NV.map = new maplibregl.Map({ container: 'nav-map', style: 'https://tiles.openfreemap.org/styles/liberty', center: [ll[0][1], ll[0][0]], zoom: 18, pitch: 58, bearing: NV.brg, attributionControl: { compact: true } });
-      m.on('load', () => {
+      let loaded = false, fell = false;
+      const OSM_STYLE = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: '© OpenStreetMap contributors' } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] };
+      const fallback = () => { if (fell || loaded || !NV.map) return; fell = true; $('#nav-status').textContent = '標準の地図に切り替えました'; m.setStyle(OSM_STYLE); };
+      setTimeout(fallback, 8000);
+      m.on('style.load', () => {
+        loaded = true; if (m.getSource('rt')) return;
         const line = ll.map(p => [p[1], p[0]]);
         m.addSource('rt', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: line } } });
         m.addSource('cov', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
@@ -755,7 +760,7 @@
         const p = run.trail.length ? run.trail[run.trail.length - 1] : null;
         if (p) navUpdate(p[0], p[1], null); else navRender();
       });
-      m.on('error', () => { if (!m.isStyleLoaded()) { const ns = $('#nav-status'); ns.textContent = '地図を読み込み中です…（通信状況を確認してください）'; } });
+      m.on('error', () => { if (!loaded) fallback(); });
     } catch (e) { closeNav(); toast('この端末ではナビ表示を開始できませんでした'); }
   }
   $('#btn-nav').onclick = openNav;
@@ -846,7 +851,7 @@
   function pauseRun() {
     stopTracking(); $('#btn-run').textContent = '再開'; $('#sim').disabled = false; $('#sim-speed').disabled = false;
   }
-  $('#btn-run').onclick = () => { if (run.running) pauseRun(); else startRun(); };
+  $('#btn-run').onclick = () => { if (run.running) pauseRun(); else { startRun(); if (!NV.open && !$('#sim').checked) openNav(); } };   // スタートすると、自分視点のナビ表示になる
   $('#btn-quit').onclick = async () => {
     const force = $('#btn-quit').dataset.force; delete $('#btn-quit').dataset.force;
     if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめますか？', 'ここまでの記録は保存されません。', 'やめる', 'このまま走る')) return;

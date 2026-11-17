@@ -87,9 +87,24 @@
         if (size > bestSize) { bestSize = size; best = cid; }
         cid++;
       }
+      /* 行き止まりの短い枝道(80m以内)は取り除く: そこに入り込んで往復するコースを防ぐ */
+      const dead = new Set(), deg = u => this.adj[u].filter(e => !dead.has(e)).length;
+      for (let s0 = 0; s0 < n; s0++) {
+        if (comp[s0] !== best || deg(s0) !== 1) continue;
+        const chain = []; let u = s0, len = 0, prevE = -1, ok = false;
+        for (let step = 0; step < 200; step++) {
+          const es = this.adj[u].filter(e => !dead.has(e) && e !== prevE);
+          if (es.length === 0) break;
+          if (es.length > 1) { ok = true; break; }                // 分岐に到達 → この鎖は枝道
+          const e = es[0]; chain.push(e); len += this.edges[e][2]; prevE = e; u = this.other(e, u);
+          if (len > 80) break;
+          if (deg(u) >= 3) { ok = true; break; }
+        }
+        if (ok && len <= 80) chain.forEach(e => dead.add(e));
+      }
       const g = new Graph(), map = new Int32Array(n).fill(-1);
-      for (let i = 0; i < n; i++) if (comp[i] === best) map[i] = g.addNode(this.xs[i], this.ys[i]);
-      for (const [a, b] of this.edges) if (map[a] >= 0 && map[b] >= 0) g.addEdge(map[a], map[b]);
+      for (let i = 0; i < n; i++) if (comp[i] === best && this.adj[i].some(e => !dead.has(e))) map[i] = g.addNode(this.xs[i], this.ys[i]);
+      this.edges.forEach(([a, b], e) => { if (!dead.has(e) && map[a] >= 0 && map[b] >= 0) g.addEdge(map[a], map[b]); });
       g.mx = g.edges.map(e => (g.xs[e[0]] + g.xs[e[1]]) / 2);
       g.my = g.edges.map(e => (g.ys[e[0]] + g.ys[e[1]]) / 2);
       g.nodeGrid = new PointGrid(g.xs, g.ys, 80);
@@ -132,9 +147,13 @@
     const dLat = radiusM / M_PER_DEG_LAT, dLon = radiusM / (M_PER_DEG_LON * Math.cos(lat * Math.PI / 180));
     const bbox = [lat - dLat, lon - dLon, lat + dLat, lon + dLon].map(v => v.toFixed(6)).join(',');
     const hw = light
-      ? 'footway|path|pedestrian|residential|living_street|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link'
-      : 'footway|path|pedestrian|residential|living_street|service|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|track|cycleway|road';
-    return `[out:json][timeout:60];way["highway"~"^(${hw})$"]["foot"!="no"]["access"!~"private|no"]["service"!~"driveway|parking_aisle"](${bbox});(._;>;);out skel qt;`;
+      ? 'footway|path|pedestrian|residential|living_street|unclassified|tertiary|tertiary_link|secondary|secondary_link'
+      : 'footway|path|pedestrian|residential|living_street|service|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link';
+    // 歩いて通れない・通ってはいけない道を、取得の段階で除外する:
+    // 私道/立入禁止(access)・歩行者通行禁止(foot)・屋内通路・広場の外周(area)・トンネル・工事中・階段・自転車専用・駐車場内や私道の取り付け道路
+    const ex = '["foot"!~"^(no|private|use_sidepath)$"]["access"!~"^(private|no|customers|delivery|permit)$"]["indoor"!~"."]["area"!="yes"]'
+      + '["tunnel"!~"^(yes|culvert)$"]["highway"!="steps"]["bicycle"!="designated"]["segregated"!="yes"]["service"!~"^(driveway|parking_aisle|drive-through|emergency_access|alley)$"]["level"!~"^-"]';
+    return `[out:json][timeout:60];way["highway"~"^(${hw})$"]${ex}(${bbox});(._;>;);out skel qt;`;
   }
   /* 1回分の取得: 複数のサーバーに、時間をずらして同時に問い合わせ、最初に成功したものを使う */
   function raceFetch(body, endpoints, opts) {
@@ -324,6 +343,17 @@
     if (path.length < 4) return null;
     return path.map(i => [g.xs[i], g.ys[i]]);
   }
+  /* 近くの別の区間と重なって往復している割合(0〜1)。細い中央分離帯の両側を行き来するような、紛らわしいコースを見つける */
+  function doubling(pts) {
+    const S = samplePoly(pts, 8, true), n = S.length; if (n < 20) return 0;
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 9; j < n - 8 + (i < 8 ? i : 8) && j < n; j++) {
+        if (Math.abs(S[i][0] - S[j][0]) < 12 && Math.abs(S[i][1] - S[j][1]) < 12 && Math.hypot(S[i][0] - S[j][0], S[i][1] - S[j][1]) < 12) { c++; break; }
+      }
+    }
+    return c / n;
+  }
   function polyLength(pts, closed) {
     let L = 0; for (let i = 0; i + 1 < pts.length; i++) L += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
     if (closed) L += Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]);
@@ -393,11 +423,11 @@
       if (!pts) continue;
       const ev = evaluate(pts, ideal);
       const startDist = distPtPoly(start[0], start[1], pts, true);   // 現在地からコースまでの距離
-      results.push({ pts, ideal, angle: c.ang, lengthM: polyLength(pts, true), iou: ev.iou, dev95: ev.dev95, startDist });
+      results.push({ pts, ideal, angle: c.ang, lengthM: polyLength(pts, true), iou: ev.iou, dev95: ev.dev95, startDist, dbl: doubling(pts) });
     }
     if (onProgress) onProgress(1, '完了');
     // 形の再現度を最優先にしつつ、現在地から遠いコースは下げる(100mを超えた分を減点)
-    const rank = r => r.iou - Math.max(0, r.startDist - 100) / sizeM;
+    const rank = r => r.iou - Math.max(0, r.startDist - 100) / sizeM - 1.2 * (r.dbl || 0);
     results.sort((a, b) => rank(b) - rank(a));
     if (!results.length) throw new Error('ルートを作れませんでした。別の場所か大きさを試してください。');
     return results.slice(0, keep);
