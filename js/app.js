@@ -438,24 +438,23 @@
     }, 4000);
   }
   function stopLoader() {
-    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#dpad').hidden = true; $('#ld-open').hidden = true;
+    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#ld-open').hidden = true;
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.remove('on'));
   }
   const GAME_HELP = {
     jump: '遊び方：画面をタップでジャンプ。障害物をよけて、できるだけ遠くまで走ろう。',
-    snake: '遊び方：下の十字キー、または指でなぞって向きを変えます。おにぎりを食べて長くなろう。壁や自分にぶつかるとおしまい。',
+    stop: '遊び方：左右に動くランナーを、タップで止めます。緑の旗の枠の中で止まれば得点（真ん中ほど高得点）。3回はずすとおしまい。',
     mole: '遊び方：出てきたもぐらをタップ！ 早くたたくほど高得点。',
   };
   $('.ld-game-tabs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const cv = $('#game');
     const hp = $('#game-help');
-    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; hp.hidden = true; $('#dpad').hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
+    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; hp.hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.toggle('on', x === b));
-    cv.hidden = false; hp.hidden = false; hp.textContent = GAME_HELP[b.dataset.g]; $('#dpad').hidden = b.dataset.g !== 'snake'; MiniGame.start(cv, b.dataset.g);
+    cv.hidden = false; hp.hidden = false; hp.textContent = GAME_HELP[b.dataset.g]; MiniGame.start(cv, b.dataset.g);
     cv.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
-  $('#dpad').addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b) { e.preventDefault(); MiniGame.dir(b.dataset.d); } });
   $('#ld-cancel').onclick = async () => {
     if (!await askConfirm('コース作成をやめますか？', 'ここまでの作成は中止されます。', 'やめる', '続ける')) return;
     plan.token++; plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#loading').hidden = true; stopLoader();
@@ -520,7 +519,7 @@
       plan.routes = routes; plan.sel = 0; plan.lat0 = lat0; plan.lon0 = lon0; plan.demo = src === 'demo';
       Music.sfx('ok'); saveDraft(); showRoutes();
       if (!$('#game').hidden && !$('#loading').hidden) {      // ゲーム中は、勢いで押してもコース画面に移らないよう、ボタンで進む
-        MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#dpad').hidden = true;
+        MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true;
         $('#loader-phase').textContent = '🎉 コースができました！'; $('#loading .bar i').style.width = '100%'; $('#loader-pct').textContent = '100%';
         const ob = $('#ld-open'); ob.hidden = false; ob.disabled = true; setTimeout(() => { ob.disabled = false; }, 1200);
         ob.onclick = () => { $('#loading').hidden = true; stopLoader(); };
