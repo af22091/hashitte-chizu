@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=20261117b">
+<link rel="stylesheet" href="css/style.css?v=20261117d">
 </head>
 <body>
 <header id="top">
@@ -70,19 +70,12 @@
           <option value="demo">デモ（疑似道路・ネット不要）</option>
         </select>
       </div>
+      <button id="btn-draft" class="opt draft" hidden></button>
       <button id="btn-make" class="primary opt">コースを作る</button>
-      <div id="plan-prog" hidden>
-        <div class="loader">
-          <div id="loader-shape" aria-hidden="true"></div>
-          <div class="loader-text"><b id="loader-phase">準備中…</b><span id="loader-tip"></span></div>
-        </div>
-        <div class="bar"><i></i></div>
-        <div class="loader-pct"><button id="btn-game" class="mini" type="button">🏃 待ち時間であそぶ</button><span id="loader-pct" class="muted">0%</span></div>
-        <canvas id="game" hidden aria-label="ミニゲーム: タップでジャンプ"></canvas>
-      </div>
       <div id="plan-results" hidden>
         <div id="chips"></div>
         <div id="plan-info" class="muted"></div>
+        <button id="btn-3d" type="button">🛰 3D・衛星で見る</button>
         <button id="btn-go" class="primary">このコースで走る</button>
       </div>
       <button class="link" id="btn-opts" hidden>← 条件を変える（大きさ・場所・道路）</button>
@@ -123,6 +116,36 @@
   <div class="card" id="modal-card"></div>
 </div>
 
+
+<!-- コース作成中の大きなロード画面 -->
+<div id="loading" hidden>
+  <div class="ld-card">
+    <div class="ld-top"><b id="ld-title">コースを作っています</b><button id="ld-cancel" class="link" type="button">やめる</button></div>
+    <div id="loader-shape" aria-hidden="true"></div>
+    <b id="loader-phase">準備中…</b>
+    <div class="bar"><i></i></div>
+    <span id="loader-pct" class="muted">0%</span>
+    <div id="loader-tip" class="ld-tip" aria-live="polite"></div>
+    <div class="ld-games">
+      <div class="ld-game-tabs" role="tablist">
+        <button type="button" data-g="jump">🏃 ジャンプ</button><button type="button" data-g="snake">🍙 へび</button><button type="button" data-g="mole">🐹 もぐら</button>
+      </div>
+      <canvas id="game" hidden aria-label="ミニゲーム"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- 3D・衛星ビュー -->
+<div id="view3d" hidden>
+  <div id="map3d"></div>
+  <div class="v3-bar">
+    <button id="v3-close" class="icon" aria-label="とじる">✕</button>
+    <div class="seg" id="v3-style"><button data-st="map" class="on">3D地図</button><button data-st="sat">衛星</button></div>
+    <button id="v3-play" class="icon" aria-label="一周を再生">⏸</button>
+  </div>
+  <div id="v3-msg" class="v3-msg" hidden></div>
+</div>
+
 <div id="toast" hidden></div>
 
 <script>
@@ -134,11 +157,11 @@ window.addEventListener('error', function (e) {
 <script src="lib/leaflet/leaflet.js"></script>
 <script src="lib/maplibre/maplibre-gl.js"></script>
 <script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="js/music.js?v=20261117b"></script>
-<script src="js/trivia.js?v=20261117b"></script>
-<script src="js/game.js?v=20261117b"></script>
-<script src="data/embedded.js?v=20261117b"></script>
-<script src="js/route.js?v=20261117b"></script>
-<script src="js/app.js?v=20261117b"></script>
+<script src="js/music.js?v=20261117d"></script>
+<script src="js/trivia.js?v=20261117d"></script>
+<script src="js/game.js?v=20261117d"></script>
+<script src="data/embedded.js?v=20261117d"></script>
+<script src="js/route.js?v=20261117d"></script>
+<script src="js/app.js?v=20261117d"></script>
 </body>
 </html>

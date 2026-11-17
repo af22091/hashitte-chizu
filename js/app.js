@@ -120,7 +120,13 @@
   function goHome() {
     cur = null; closeSheet(); show('home'); renderHome();
   }
-  $('#btn-home').onclick = goHome;
+  $('#btn-home').onclick = async () => {
+    if (mode === 'run' && run.tracker.progress > 0.05 && !await askConfirm('ホームにもどりますか？', 'ここまでの記録は保存されません。', 'もどる', 'このまま走る')) return;
+    if (mode === 'plan' && plan.routes.length && !await askConfirm('ホームにもどりますか？', '作ったコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', 'もどる', 'このまま続ける')) return;
+    if (mode === 'run') $('#btn-quit').dataset.force = '1', $('#btn-quit').click();
+    if (mode === 'plan') { clearCourse(); leaveMap(); }
+    goHome();
+  };
 
   /* ---------- ① パズル盤(拡大・移動つき) ---------- */
   let selectedId = null, view = null, base = null;
@@ -164,11 +170,11 @@
     clampView(); applyView();
   }
   const zoomCenter = f => zoomAt(view.x + view.w / 2, view.y + view.h / 2, f);
-  $('#z-in').onclick = () => zoomCenter(1.6);
-  $('#z-out').onclick = () => zoomCenter(1 / 1.6);
+  $('#z-in').onclick = () => zoomCenter(1.35);
+  $('#z-out').onclick = () => zoomCenter(1 / 1.35);
   $('#z-reset').onclick = () => { view = Object.assign({}, base); applyView(); };
   $('#board').addEventListener('wheel', e => {
-    e.preventDefault(); const p = svgPt(e.clientX, e.clientY); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.25 : 0.8);
+    e.preventDefault(); const p = svgPt(e.clientX, e.clientY); zoomAt(p.x, p.y, Math.exp(-Math.max(-50, Math.min(50, e.deltaY)) * 0.0012));
   }, { passive: false });
 
   /* ドラッグで移動・2本指(またはホイール)で拡大。ほとんど動かなかったらタップ扱い */
@@ -259,38 +265,71 @@
   }
   function ensureMap() {
     if (map) return;
-    map = L.map('map', { zoomControl: true });
-    /* 地図の見た目: きれい(ベクター地図 OpenFreeMap) / 標準(OSM) / 淡色(国土地理院・日本のみ)。
-       ベクター地図が読み込めない端末では、自動で標準に切り替える */
+    map = L.map('map', { zoomControl: true, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 160, wheelDebounceTime: 60 });
+    /* 地図は2種類: きれい(ベクター地図 OpenFreeMap) / 衛星(Esri World Imagery)。
+       ベクター地図が読み込めない端末では、自動で標準(OSM)の地図に切り替える */
     const bases = {};
     const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
-    const gsi = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', { maxZoom: 19, maxNativeZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>' });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
     let vec = null, webgl = false;
     try { webgl = !!document.createElement('canvas').getContext('webgl'); } catch (e) { /* なし */ }
     if (webgl && window.maplibregl && L.maplibreGL) {
       vec = L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/liberty', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
-      bases['きれい'] = vec;
     }
-    bases['標準'] = osm; bases['淡色（日本）'] = gsi;
-    let pick = vec ? 'きれい' : '標準'; try { pick = localStorage.getItem('hashitte-basemap2') || pick; } catch (e) { /* 既定 */ }
-    if (!bases[pick]) pick = '標準';
+    bases['きれい'] = vec || osm; bases['衛星'] = sat;
+    let pick = 'きれい'; try { pick = localStorage.getItem('hashitte-basemap3') || pick; } catch (e) { /* 既定 */ }
+    if (!bases[pick]) pick = 'きれい';
     bases[pick].addTo(map);
-    if (vec && pick === 'きれい') {                       // 読み込みに失敗したら標準へ
-      let ok = false; const fallback = () => { if (!ok && map.hasLayer(vec)) { map.removeLayer(vec); osm.addTo(map); toast('きれいな地図を読み込めなかったため、標準の地図にしました'); } };
+    if (vec && pick === 'きれい') {
+      let ok = false; const fallback = () => { if (!ok && map.hasLayer(vec)) { map.removeLayer(vec); osm.addTo(map); bases['きれい'] = osm; toast('きれいな地図を読み込めなかったため、標準の地図にしました'); } };
       try { const m = vec.getMaplibreMap(); m.on('load', () => { ok = true; }); m.on('error', () => { if (!ok) fallback(); }); } catch (e) { fallback(); }
       setTimeout(fallback, 12000);
     }
     L.control.layers(bases, null, { position: 'topright', collapsed: true }).addTo(map);
-    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap2', e.name); } catch (err) { /* なし */ } });
+    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap3', e.name); } catch (err) { /* なし */ } });
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
     map.setView(s, 15);
-    map.on('click', e => { if (mode === 'plan') setStart([e.latlng.lat, e.latlng.lng]); });
+    map.on('click', async e => { if (mode !== 'plan' || plan.busy) return; if (!await guardCourse()) return; setStart([e.latlng.lat, e.latlng.lng]); });
   }
+
+  /* ---------- 確認ダイアログ(まちがい防止) ---------- */
+  function askConfirm(title, body, okLabel, cancelLabel) {
+    return new Promise(res => {
+      const m = $('#modal'), c = $('#modal-card'), prev = c.innerHTML, prevHidden = m.hidden;
+      c.innerHTML = `<h2 style="font-size:20px">${title}</h2><p class="muted" style="line-height:1.7">${body}</p>` +
+        `<div class="row" style="gap:10px;margin-top:14px"><button id="cf-no" style="flex:1">${cancelLabel || 'もどる'}</button><button id="cf-ok" class="primary" style="flex:1">${okLabel || 'OK'}</button></div>`;
+      m.hidden = false;
+      const done = v => { m.removeEventListener('click', bg, true); c.innerHTML = prev; m.hidden = prevHidden; res(v); };
+      const bg = e => { if (e.target === m) { e.stopPropagation(); done(false); } };
+      m.addEventListener('click', bg, true);
+      $('#cf-ok').onclick = () => done(true); $('#cf-no').onclick = () => done(false);
+    });
+  }
+  /* 作ったコースがあるとき、消える操作の前に確認する */
+  async function guardCourse() {
+    if (!plan.routes.length) return true;
+    const ok = await askConfirm('作ったコースが消えます', 'このまま進むと、いま表示しているコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', '消して進む', 'もどる');
+    if (ok) clearCourse();
+    return ok;
+  }
+  function clearCourse() {
+    plan.routes = []; planLayer && planLayer.clearLayers(); $('#plan-results').hidden = true;
+    $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true; refreshDraft();
+  }
+  window.addEventListener('beforeunload', e => { if ((mode === 'plan' && plan.routes.length) || mode === 'run') { e.preventDefault(); e.returnValue = ''; } });
+  history.replaceState({ a: 1 }, ''); history.pushState({ a: 2 }, '');
+  window.addEventListener('popstate', () => {          // 端末の「戻る」を押しても、すぐには画面を離れない
+    history.pushState({ a: 2 }, '');
+    if ($('#view3d') && !$('#view3d').hidden) return close3d();
+    if (mode === 'run') $('#run-back').click();
+    else if (mode === 'plan') $('#plan-back').click();
+    else if (cur) goHome();
+  });
 
   /* ---------- ② コース作成 ---------- */
   let mode = 'board';
-  const plan = { pref: null, size: 'm', start: null, routes: [], sel: 0, lat0: 0, lon0: 0, busy: false };
+  const plan = { pref: null, size: 'm', start: null, routes: [], sel: 0, lat0: 0, lon0: 0, busy: false, token: 0 };
 
   function openPlan(id) {
     closeSheet(); mode = 'plan';
@@ -298,38 +337,68 @@
     show('map'); runLayer.clearLayers(); planLayer.clearLayers();
     $('#panel-run').hidden = true; $('#panel-plan').hidden = false;
     $('#plan-title').textContent = plan.pref.name + ' を走る'; plan.mk = cur;
-    $('#plan-results').hidden = true; $('#plan-msg').textContent = ''; $('#plan-prog').hidden = true;
+    $('#plan-results').hidden = true; $('#plan-msg').textContent = ''; $('#loading').hidden = true;
     $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true;
     setStart(save.lastStart || DEFAULT_START, true);
-    updateEst();
+    updateEst(); refreshDraft();
   }
+  /* 作ったコースの控え: 消してしまっても12時間は呼び戻せる */
+  const r1 = n => +n.toFixed(1);
+  function saveDraft() {
+    save.draft = { mk: cur, id: plan.pref.id, size: plan.size, lat0: plan.lat0, lon0: plan.lon0, t: Date.now(),
+      routes: plan.routes.map(r => ({ pts: r.pts.map(p => [r1(p[0]), r1(p[1])]), ideal: r.ideal.map(p => [r1(p[0]), r1(p[1])]),
+        iou: r.iou, lengthM: r.lengthM, dev95: r.dev95, angle: r.angle, startDist: r.startDist })) };
+    persist();
+  }
+  function refreshDraft() {
+    const d = save.draft, b = $('#btn-draft');
+    const ok = d && plan.pref && d.mk === cur && d.id === plan.pref.id && Date.now() - d.t < 12 * 3600e3 && !plan.routes.length;
+    b.hidden = !ok; if (!ok) return;
+    const m = Math.max(1, Math.round((Date.now() - d.t) / 60000));
+    b.textContent = `🕘 前回作ったコースを使う（${m < 60 ? m + '分前' : Math.round(m / 60) + '時間前'}）`;
+  }
+  $('#btn-draft').onclick = () => {
+    const d = save.draft; if (!d) return;
+    plan.size = d.size; document.querySelectorAll('#size-seg button').forEach(x => x.classList.toggle('on', x.dataset.s === d.size)); updateEst();
+    setStart(RE.toLatLng(0, 0, d.lat0, d.lon0), true);
+    plan.routes = d.routes; plan.sel = 0; plan.lat0 = d.lat0; plan.lon0 = d.lon0; plan.demo = false;
+    $('#btn-draft').hidden = true; showRoutes();
+  };
   function setStart(ll, recenter) {
     plan.start = ll; save.lastStart = ll; persist();
     if (!startMarker) {
       startMarker = L.marker(ll, { draggable: true, icon: L.divIcon({ className: '', html: '<div class="start-pin">📍</div>', iconSize: [26, 26], iconAnchor: [13, 24] }) }).addTo(map);
-      startMarker.on('dragend', () => { const p = startMarker.getLatLng(); setStart([p.lat, p.lng]); });
+      startMarker.on('dragend', async () => {
+        const p = startMarker.getLatLng();
+        if (plan.routes.length && !await guardCourse()) { startMarker.setLatLng(plan.start); return; }
+        setStart([p.lat, p.lng]);
+      });
     } else startMarker.setLatLng(ll);
     if (!startMarker._map) startMarker.addTo(map);
     if (recenter) map.setView(ll, 15);
-    if (plan.routes.length) { plan.routes = []; planLayer.clearLayers(); $('#plan-results').hidden = true; $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true; }
   }
   function updateEst() {
     const p = plan.pref; if (!p) return;
     $('#plan-est').textContent = `${(sizeOf(p, plan.size) / 1000).toFixed(1)}km四方・走る距離の目安 約${estKm(p, plan.size).toFixed(1)}km`;
   }
-  $('#size-seg').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
+  $('#size-seg').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b || b.dataset.s === plan.size) return;
+    if (!await guardCourse()) return;
     plan.size = b.dataset.s;
     document.querySelectorAll('#size-seg button').forEach(x => x.classList.toggle('on', x === b));
-    updateEst(); plan.routes = []; planLayer.clearLayers(); $('#plan-results').hidden = true;
+    updateEst();
   });
-  $('#btn-here').onclick = () => {
+  $('#btn-here').onclick = async () => {
+    if (!await guardCourse()) return;
     if (!navigator.geolocation) return toast('この端末では現在地を取得できません');
     navigator.geolocation.getCurrentPosition(
       p => setStart([p.coords.latitude, p.coords.longitude], true),
       err => toast('現在地を取得できませんでした: ' + err.message), { enableHighAccuracy: true, timeout: 12000 });
   };
-  $('#plan-back').onclick = () => { leaveMap(); };
+  $('#plan-back').onclick = async () => {
+    if (plan.routes.length && !await askConfirm('マップ画面にもどりますか？', '作ったコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', 'もどる', 'このまま続ける')) return;
+    clearCourse(); leaveMap();
+  };
   function leaveMap() {
     mode = 'board'; if (startMarker) { startMarker.remove(); }
     planLayer && planLayer.clearLayers(); runLayer && runLayer.clearLayers();
@@ -357,6 +426,7 @@
   function startLoader() {
     $('#loader-shape').innerHTML = plan.pref ? outlineSvg(plan.pref.outline) : '';
     tips = (window.TRIVIA_JP && cur === 'jp' && plan.pref && TRIVIA_JP[plan.pref.short] ? ['🗾 ' + TRIVIA_JP[plan.pref.short]] : []).concat(TIPS);
+    $('#ld-title').textContent = (plan.pref ? plan.pref.name : '') + 'のコースを作っています';
     tipI = 0; $('#loader-tip').textContent = tips[0];
     clearInterval(tipTimer);
     tipTimer = setInterval(() => {
@@ -364,15 +434,25 @@
       setTimeout(() => { tipI = (tipI + 1) % tips.length; el.textContent = tips[tipI]; el.classList.remove('out'); }, 250);
     }, 4000);
   }
-  function stopLoader() { clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#btn-game').textContent = '🏃 待ち時間であそぶ'; }
-  $('#btn-game').onclick = () => {
+  function stopLoader() {
+    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true;
+    document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.remove('on'));
+  }
+  $('.ld-game-tabs').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
     const cv = $('#game');
-    if (cv.hidden) { cv.hidden = false; MiniGame.start(cv); $('#btn-game').textContent = 'ゲームをとじる'; }
-    else { MiniGame.stop(); cv.hidden = true; $('#btn-game').textContent = '🏃 待ち時間であそぶ'; }
+    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
+    document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.toggle('on', x === b));
+    cv.hidden = false; MiniGame.start(cv, b.dataset.g);
+    cv.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+  $('#ld-cancel').onclick = async () => {
+    if (!await askConfirm('コース作成をやめますか？', 'ここまでの作成は中止されます。', 'やめる', '続ける')) return;
+    plan.token++; plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#loading').hidden = true; stopLoader();
   };
   function progress(f, text) {
-    if ($('#plan-prog').hidden) { $('#plan-prog').hidden = false; startLoader(); }
-    $('#plan-prog .bar i').style.width = Math.round(f * 100) + '%';
+    if ($('#loading').hidden) { $('#loading').hidden = false; startLoader(); }
+    $('#loading .bar i').style.width = Math.round(f * 100) + '%';
     $('#loader-pct').textContent = Math.round(f * 100) + '%';
     if (text) $('#loader-phase').textContent = text;
   }
@@ -406,7 +486,7 @@
   async function makeCourse() {
     if (plan.busy) return;
     const sizeM = sizeOf(plan.pref, plan.size), [lat0, lon0] = plan.start, src = $('#src').value;
-    plan.busy = true; Music.scene('work'); $('#btn-make').disabled = true; $('#btn-make').textContent = '作成中…'; $('#plan-msg').textContent = '';
+    plan.busy = true; const tok = ++plan.token; Music.scene('work'); $('#btn-make').disabled = true; $('#btn-make').textContent = '作成中…'; $('#plan-msg').textContent = '';
     $('#plan-results').hidden = true; planLayer.clearLayers();
     try {
       let g;
@@ -426,12 +506,14 @@
         graph: g, outline: plan.pref.outline, sizeM, start: [0, 0],
         onProgress: (f, t) => progress(0.15 + 0.85 * f, t),
       });
+      if (tok !== plan.token) return;
       plan.routes = routes; plan.sel = 0; plan.lat0 = lat0; plan.lon0 = lon0; plan.demo = src === 'demo';
-      Music.sfx('ok'); showRoutes();
+      Music.sfx('ok'); saveDraft(); showRoutes();
     } catch (e) {
+      if (tok !== plan.token) return;
       $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
     } finally {
-      plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#plan-prog').hidden = true; stopLoader();
+      if (tok === plan.token) { plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#loading').hidden = true; stopLoader(); }
     }
   }
   /* 地図を合わせるときの余白(パネルに隠れない位置に収める) */
@@ -461,6 +543,76 @@
   }
   $('#btn-opts').onclick = () => { $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true; };
   $('#btn-go').onclick = () => openRun(plan.routes[plan.sel]);
+
+  /* ---------- 3D・衛星ビューア: 作ったコースの上空を、一周ぶん飛んで見られる ---------- */
+  let v3 = null, v3raf = 0, v3play = true, v3style = 'map', v3t = 0;
+  function v3msg(t) { const m = $('#v3-msg'); m.textContent = t || ''; m.hidden = !t; }
+  function close3d() {
+    cancelAnimationFrame(v3raf); $('#view3d').hidden = true;
+    if (v3) { try { v3.remove(); } catch (e) { /* なし */ } v3 = null; }
+  }
+  function applyV3Style() {
+    if (!v3 || !v3.isStyleLoaded()) return;
+    const sat = v3style === 'sat';
+    if (v3.getLayer('esri')) v3.setLayoutProperty('esri', 'visibility', sat ? 'visible' : 'none');
+    for (const l of v3.getStyle().layers) {
+      if (['background', 'fill', 'line'].includes(l.type) && !l.id.startsWith('route')) {
+        try { v3.setLayoutProperty(l.id, 'visibility', sat ? 'none' : 'visible'); } catch (e) { /* なし */ }
+      }
+    }
+    document.querySelectorAll('#v3-style button').forEach(b => b.classList.toggle('on', b.dataset.st === v3style));
+  }
+  $('#v3-style').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; v3style = b.dataset.st; applyV3Style(); });
+  $('#v3-close').onclick = close3d;
+  $('#v3-play').onclick = () => { v3play = !v3play; $('#v3-play').textContent = v3play ? '⏸' : '▶'; };
+  $('#btn-3d').onclick = () => {
+    const r = plan.routes[plan.sel]; if (!r) return;
+    if (!window.maplibregl) return toast('3D表示を読み込めませんでした');
+    $('#view3d').hidden = false; v3msg('3D地図を読み込み中…'); v3play = true; $('#v3-play').textContent = '⏸'; v3t = 0;
+    const ll = toLL(r.pts.concat([r.pts[0]]), plan.lat0, plan.lon0).map(p => [p[1], p[0]]);
+    const cum = [0]; for (let i = 1; i < ll.length; i++) cum.push(cum[i - 1] + haversine([ll[i - 1][1], ll[i - 1][0]], [ll[i][1], ll[i][0]]));
+    const total = cum[cum.length - 1] || 1;
+    const at = d => { d = ((d % total) + total) % total; let i = 1; while (i < cum.length - 1 && cum[i] < d) i++; const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1); return [ll[i - 1][0] + (ll[i][0] - ll[i - 1][0]) * f, ll[i - 1][1] + (ll[i][1] - ll[i - 1][1]) * f]; };
+    const bearing = (a, b) => { const y = Math.sin((b[0] - a[0]) * Math.PI / 180) * Math.cos(b[1] * Math.PI / 180); const x = Math.cos(a[1] * Math.PI / 180) * Math.sin(b[1] * Math.PI / 180) - Math.sin(a[1] * Math.PI / 180) * Math.cos(b[1] * Math.PI / 180) * Math.cos((b[0] - a[0]) * Math.PI / 180); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; };
+    try {
+      if (v3) { v3.remove(); v3 = null; }
+      const start = ll[0];
+      v3 = new maplibregl.Map({ container: 'map3d', style: 'https://tiles.openfreemap.org/styles/liberty', center: start, zoom: 15.5, pitch: 62, bearing: 0, maxPitch: 80, attributionControl: { compact: true } });
+      const m = v3;
+      m.on('error', e => { if (!m.isStyleLoaded()) v3msg('地図データを読み込めませんでした。通信状況を確認してください'); });
+      m.on('load', () => {
+        v3msg('');
+        try {
+          m.addSource('esri', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+          const first = m.getStyle().layers.find(l => l.type !== 'background');
+          m.addLayer({ id: 'esri', type: 'raster', source: 'esri', layout: { visibility: 'none' } }, first && first.id);
+          m.addSource('dem', { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 14, encoding: 'terrarium' });
+          m.setTerrain({ source: 'dem', exaggeration: 1.2 });
+        } catch (e) { /* 地形なしでも続行 */ }
+        m.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: ll } } });
+        m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#fff', 'line-width': 11 } });
+        m.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#e8384f', 'line-width': 6 } });
+        m.addSource('me', { type: 'geojson', data: { type: 'Point', coordinates: start } });
+        m.addLayer({ id: 'route-me', type: 'circle', source: 'me', paint: { 'circle-radius': 9, 'circle-color': '#1e88e5', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
+        applyV3Style();
+        let last = performance.now(), brg = bearing(start, at(150));
+        const speed = total / 45;                                     // 一周 約45秒
+        const tick = now => {
+          const dt = Math.min(0.1, (now - last) / 1000); last = now;
+          if (v3play) {
+            v3t += speed * dt; const p = at(v3t);
+            const tb = bearing(p, at(v3t + Math.max(120, total * 0.04)));
+            let d = ((tb - brg + 540) % 360) - 180; brg = (brg + d * Math.min(1, dt * 1.6) + 360) % 360;
+            m.getSource('me').setData({ type: 'Point', coordinates: p });
+            m.jumpTo({ center: p, bearing: brg, pitch: 62, zoom: 16.2 });
+          }
+          v3raf = requestAnimationFrame(tick);
+        };
+        v3raf = requestAnimationFrame(tick);
+      });
+      m.on('dragstart', () => { v3play = false; $('#v3-play').textContent = '▶'; });
+    } catch (e) { v3msg('3D表示を開始できませんでした（この端末では未対応かもしれません）'); }
+  };
 
   /* ---------- ③ 走る(GPSで本当に通らないと完成しない) ---------- */
   const run = { route: null, lat0: 0, lon0: 0, planLL: [], tracker: null, trail: [], t0: 0, elapsed: 0,
@@ -555,8 +707,9 @@
     stopTracking(); $('#btn-run').textContent = '再開'; $('#sim').disabled = false; $('#sim-speed').disabled = false;
   }
   $('#btn-run').onclick = () => { if (run.running) pauseRun(); else startRun(); };
-  $('#btn-quit').onclick = () => {
-    if (run.tracker.progress > 0.05 && !confirm('ここまでの記録は保存されません。やめますか？')) return;
+  $('#btn-quit').onclick = async () => {
+    const force = $('#btn-quit').dataset.force; delete $('#btn-quit').dataset.force;
+    if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめますか？', 'ここまでの記録は保存されません。', 'やめる', 'このまま走る')) return;
     stopTracking(); runLayer.clearLayers(); mode = 'plan';
     $('#panel-run').hidden = true; $('#panel-plan').hidden = false;
     if (startMarker) startMarker.addTo(map); showRoutes();
