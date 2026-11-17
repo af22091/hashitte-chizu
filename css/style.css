@@ -70,7 +70,7 @@ main { position: relative; flex: 1; min-height: 0; }
 #board-wrap { flex: 1; min-height: 0; width: 100%; display: flex; justify-content: center; padding: 6px; }
 #board { height: 100%; max-width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
 #board .ocean { fill: transparent; }
-#board .frame { fill: rgba(255,255,255,.35); stroke: #6c8da3; stroke-width: 1.2; stroke-dasharray: 5 4; rx: 4; }
+#board .frame { fill: none; stroke: #8fa3b2; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 #board .piece { fill: var(--todo); stroke: #fff; stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; cursor: pointer; transition: fill .25s, filter .15s; }
 #board .piece:hover { filter: brightness(.96) drop-shadow(0 2px 3px rgba(16,41,59,.25)); }
 #board .piece.done:hover { filter: brightness(1.06) drop-shadow(0 2px 3px rgba(16,41,59,.3)); }

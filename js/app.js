@@ -134,7 +134,7 @@
     if (!cur) return;
     const [x0, y0, w, h] = data.viewBox, runs = RUNS();
     let html = `<rect class="ocean" x="${x0}" y="${y0}" width="${w}" height="${h}"/>`;
-    if (data.inset) { const [ix, iy, iw, ih] = data.inset; html += `<rect class="frame" x="${ix}" y="${iy}" width="${iw}" height="${ih}"/>`; }
+    if (data.inset) { const [ix, iy, iw, ih] = data.inset; html += `<path class="frame" d="M${ix},${iy + ih} L${ix},${iy} L${ix + iw},${iy}"/>`; }
     for (const p of prefs) {
       const done = !!runs[p.id];
       html += `<path class="piece${done ? ' done' : ''}${selectedId === p.id ? ' sel' : ''}" data-id="${p.id}" d="${p.d}"` +
