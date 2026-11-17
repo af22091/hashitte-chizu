@@ -31,12 +31,12 @@
         g.obs.forEach(o => { o.x -= g.speed; }); g.obs = g.obs.filter(o => o.x > -40);
         for (const o of g.obs) if (o.x < 58 && o.x + o.w > 34 && g.y < 22) { g.over = true; saveBest('jump', g.score); }
       }
-      c.fillStyle = '#cfeaf6'; c.fillRect(0, 0, W, H);
+      c.fillStyle = '#fff3b8'; c.fillRect(0, 0, W, H);
       c.fillStyle = '#fff'; for (let i = 0; i < 3; i++) { const x = ((i * 130 - g.t * 0.4) % (W + 60) + W + 60) % (W + 60) - 30; c.beginPath(); c.arc(x, 30 + i * 9, 10, 0, 7); c.arc(x + 12, 32 + i * 9, 8, 0, 7); c.fill(); }
       c.fillStyle = '#9fd0b5'; c.fillRect(0, GY + 4, W, H - GY);
       c.strokeStyle = '#fff'; c.lineWidth = 3; c.setLineDash([12, 10]); c.lineDashOffset = g.t * g.speed; c.beginPath(); c.moveTo(0, GY + 12); c.lineTo(W, GY + 12); c.stroke(); c.setLineDash([]);
       c.font = '26px sans-serif'; c.fillText('🏃', 32, GY - g.y); g.obs.forEach(o => c.fillText('🚧', o.x, GY + 2));
-      c.fillStyle = '#10293b'; c.font = '700 13px sans-serif'; c.fillText(`${g.score}m  ベスト ${best('jump')}m`, 10, 20);
+      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.fillText(`${g.score}m  ベスト ${best('jump')}m`, 10, 20);
       if (g.over) overlay(W, H, `${g.score}m 走りました`, 'タップでもう一度');
     };
     raf = requestAnimationFrame(loop);
@@ -62,7 +62,7 @@
       const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
       if (!g.over) { g.x += g.dir * (120 + g.score * 9) * dt; if (g.x > X1) { g.x = X1; g.dir = -1; } if (g.x < X0) { g.x = X0; g.dir = 1; } }
       c.fillStyle = '#e9f1f6'; c.fillRect(0, 0, W, H);
-      c.fillStyle = '#10293b'; c.font = '700 13px sans-serif'; c.textAlign = 'left'; c.fillText(`${g.score}てん  ベスト ${best('stop')}てん`, 8, 18);
+      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.textAlign = 'left'; c.fillText(`${g.score}てん  ベスト ${best('stop')}てん`, 8, 18);
       c.textAlign = 'right'; c.fillText('❤'.repeat(Math.max(0, g.life)), W - 8, 18); c.textAlign = 'left';
       const TY = 120;
       c.fillStyle = '#c9d6df'; c.fillRect(X0 - 10, TY, X1 - X0 + 20, 6);
@@ -99,7 +99,7 @@
         }
       }
       c.fillStyle = '#d9ecdf'; c.fillRect(0, 0, W, H);
-      c.fillStyle = '#10293b'; c.font = '700 14px sans-serif'; c.fillText(`${g.score}ひき   のこり ${left.toFixed(1)}秒   ベスト ${best('mole')}`, 8, 20);
+      c.fillStyle = '#1c1b22'; c.font = '700 14px sans-serif'; c.fillText(`${g.score}ひき   のこり ${left.toFixed(1)}秒   ベスト ${best('mole')}`, 8, 20);
       for (let i = 0; i < 9; i++) {
         const cx = (i % 3) * CELL + CELL / 2, cy = 30 + Math.floor(i / 3) * CELL + CELL / 2 + 8;
         c.fillStyle = '#7a5a3a'; c.beginPath(); c.ellipse(cx, cy + 18, 32, 13, 0, 0, 7); c.fill();

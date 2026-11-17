@@ -1,11 +1,11 @@
 /* はしって地図あつめ — 見た目
    方針: 海の青の上に、走った県だけが鮮やかに色づく。赤い線=これから走る道、という色の意味を全画面でそろえる。 */
 :root {
-  --sea: #b9dff0; --sea-d: #8fc6e0; --ink: #10293b; --ink2: #3b5265; --muted: #6b7f8f;
-  --chalk: #f3f6f8; --card: #fff; --line: #dbe5ec;
-  --route: #e8384f; --route-d: #c92b41; --go: #1fa971; --danger: #c9302c; --todo: #eef2f5;
+  --sea: #ffd84a; --sea-d: #f2b705; --ink: #1c1b22; --ink2: #44414d; --muted: #75717f;
+  --chalk: #f6f3ee; --card: #fff; --line: #1c1b22;
+  --route: #ff4d6d; --route-d: #e63457; --go: #19b37a; --danger: #d6264a; --todo: #ffffff; --violet: #7b3fe4;
   --r-lg: 22px; --r-md: 14px; --r-sm: 10px;
-  --shadow: 0 10px 30px rgba(16,41,59,.18), 0 2px 6px rgba(16,41,59,.10);
+  --shadow: 4px 4px 0 var(--ink);
   --font: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic UI", "Noto Sans JP", Meiryo, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -31,7 +31,7 @@ button.danger { color: var(--danger); }
 /* ヘッダー(地図に重ねる軽いバー) */
 #top { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); background: rgba(255,255,255,.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.7); z-index: 1200; }
 #top h1 { margin: 0; font-size: 19px; font-weight: 900; letter-spacing: .02em; flex: 1; }
-#counter { display: flex; align-items: baseline; gap: 4px; background: var(--ink); color: #cfe3f0; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+#counter { display: flex; align-items: baseline; gap: 4px; background: var(--ink); color: #ffd84a; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
 #counter b { font-size: 20px; color: #fff; font-weight: 900; }
 #counter[hidden] { display: none; }
 #btn-home { font-size: 14px; }
@@ -130,7 +130,7 @@ select { padding: 9px 10px; border-radius: var(--r-sm); border: 1.5px solid var(
 .row.sim { font-size: 13px; color: var(--muted); }
 #panel-run .row:last-of-type button { flex: 1; padding: 13px; border-radius: 14px; }
 .start-pin { font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
-.me-dot { width: 18px; height: 18px; border-radius: 50%; background: #1e88e5; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(30,136,229,.35), 0 2px 6px rgba(0,0,0,.4); }
+.me-dot { width: 18px; height: 18px; border-radius: 50%; background: #7b3fe4; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(123,63,228,.35), 0 2px 6px rgba(0,0,0,.4); }
 .panel.compact .opt { display: none; }
 #btn-opts { align-self: flex-start; }
 #btn-opts[hidden] { display: none; }
@@ -249,7 +249,7 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 @media (max-height: 640px) { #loading #loader-shape { width: 96px; height: 96px; } #loading #loader-tip { min-height: 4em; font-size: 14px; } }
 
 /* ---------- 3D・衛星ビュー ---------- */
-#view3d { position: fixed; inset: 0; z-index: 1250; background: #10293b; }
+#view3d { position: fixed; inset: 0; z-index: 1250; background: #1c1b22; }
 #view3d[hidden] { display: none; }
 #map3d { position: absolute; inset: 0; }
 .v3-bar { position: absolute; left: 0; right: 0; top: 0; padding: 12px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 2; }
@@ -275,7 +275,7 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 #nav { position: fixed; inset: 0; z-index: 1250; background: #dfe8ee; }
 #nav[hidden] { display: none; }
 #nav-map { position: absolute; inset: 0; }
-.nav-top { position: absolute; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top)); background: #245c64; color: #fff; border-radius: 20px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow); z-index: 2; }
+.nav-top { position: absolute; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top)); background: #1c1b22; color: #ffd84a; border-radius: 20px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow); z-index: 2; }
 .nav-top span { font-size: 40px; line-height: 1; }
 .nav-top b { font-size: 24px; font-weight: 900; }
 #nav-status { position: absolute; left: 12px; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 84px); z-index: 2; border-radius: 14px; font-size: 13px; box-shadow: var(--shadow); background: #fff; padding: 8px 12px; }
@@ -285,5 +285,61 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 .nav-bar button { grid-row: 2; padding: 12px 8px; font-size: 15px; }
 #nav-run { grid-column: 1 / 3; } #nav-close { grid-column: 3; }
 .nav-me { width: 44px; height: 44px; display: grid; place-items: center; }
-.nav-me i { width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 34px solid #1e5bff; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+.nav-me i { width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 34px solid #ff4d6d; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
 #btn-nav { flex: none; }
+
+
+/* ================= ステッカーブック風テーマ(青ベースをやめて、黄・コーラル・黒の太い線で) =================
+   形を「ダイカットのステッカー」に見立てる: 未訪問=白い台紙のシール、走ると鮮やかに色づく。黒い太線と、ずらした影で統一 */
+body { background: var(--sea); }
+button { border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 2px 2px 0 var(--ink); font-weight: 900; }
+button:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+button.primary { background: var(--route); border-color: var(--ink); color: #fff; box-shadow: 3px 3px 0 var(--ink); }
+button.primary:hover:not(:disabled) { background: var(--route-d); border-color: var(--ink); }
+button.link { border: 0; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; }
+button.icon { box-shadow: 2px 2px 0 var(--ink); }
+#top { background: #fff; border-bottom: 3px solid var(--ink); backdrop-filter: none; -webkit-backdrop-filter: none; }
+#top h1 { font-size: 20px; font-weight: 900; }
+#counter { border: 2.5px solid var(--ink); }
+#counter b { color: #ffd84a; }
+#menu { border: 2.5px solid var(--ink); box-shadow: var(--shadow); border-radius: 14px; }
+#menu button { box-shadow: none; border: 0; }
+#menu button:hover { background: #fff3b8; }
+#screen-home.active { background: var(--sea); }
+.home-lead { font-size: 30px; letter-spacing: .01em; }
+.mode-card { border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); border-radius: 20px; }
+.mode-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+.mode-card:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 var(--ink); }
+.mode-thumb { background: #fff3b8; border: 2.5px solid var(--ink); }
+.mode-thumb svg { filter: none; }
+.mode-info .bar { background: repeating-linear-gradient(90deg, #d9d4c4 0 8px, transparent 8px 13px); }
+#screen-board.active { background: radial-gradient(circle at 50% 45%, #ffe680 0%, var(--sea) 75%); }
+#board-tools input { border: 2.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); }
+#board-tools button { border: 2.5px solid var(--ink); border-radius: 999px; box-shadow: 2px 2px 0 var(--ink); }
+#board .piece { fill: #fff; stroke: var(--ink); stroke-width: 1.5; filter: drop-shadow(1.5px 2px 0 rgba(28,27,34,.55)); }
+#board .piece.done { stroke: var(--ink); }
+#board .piece:hover { filter: brightness(.97) drop-shadow(1.5px 2px 0 rgba(28,27,34,.7)); }
+#board .piece.sel { stroke: var(--route); stroke-width: 3.5; }
+#board .frame { stroke: var(--ink); stroke-width: 2.4; }
+#board .lab { fill: var(--ink); stroke: rgba(255,255,255,.95); font-weight: 900; }
+#sheet { border: 3px solid var(--ink); border-bottom: 0; box-shadow: 0 -4px 0 var(--ink); }
+.grab { background: var(--ink); }
+.trail-prev { background: #fff3b8; border: 2px solid var(--ink); }
+.stars { color: #ff9f1c; }
+.panel { border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); border-radius: 20px; }
+#modal .card { border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.ld-card { border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+#loading { background: rgba(255,216,74,.88); backdrop-filter: none; }
+#loading #loader-shape { background: #fff3b8; border: 2.5px solid var(--ink); }
+.bar { border: 2px solid var(--ink); background: #fff; }
+.bar i { background: var(--route); }
+#game { background: #fff3b8; border: 2.5px solid var(--ink); }
+.seg { background: #fff; border: 2.5px solid var(--ink); }
+.seg button { border: 0; box-shadow: none; }
+.seg button.on { background: var(--ink); color: #ffd84a; }
+#chips button { box-shadow: 2px 2px 0 var(--ink); }
+#chips button.on { background: #ffd84a; }
+.nav-bar { border-top: 3px solid var(--ink); }
+.leaflet-control-layers, .leaflet-bar { border: 2.5px solid var(--ink) !important; box-shadow: 2px 2px 0 var(--ink) !important; }
+.start-pin { filter: drop-shadow(1px 2px 0 rgba(28,27,34,.6)); }
+#btn-go { width: 100%; padding: 14px; font-size: 17px; }

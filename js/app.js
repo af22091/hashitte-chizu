@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const RE = window.RouteEngine;
-  const COLORS = ['#ff6b6b', '#ffc145', '#2ec4a6', '#9b7bf2', '#3da5f5'];
+  const COLORS = ['#ff6b81', '#ffb703', '#22c493', '#a27bff', '#ff9ad5'];
   const SIZES = { s: 1000, m: 1500, l: 2000 };            // 形の最長辺(m)
   const STORE_KEY = 'hashitte-nihon-v1';
   const DEFAULT_START = [35.6762, 139.6503];              // 場所が未設定のときの地図の中心(東京)
@@ -95,7 +95,7 @@
   function thumb(mk) {
     const D = DATAS[mk], runs = runsOf(mk), [x0, y0, w, h] = D.data.viewBox;
     let html = `<svg viewBox="${x0} ${y0} ${w} ${h}" xmlns="http://www.w3.org/2000/svg">`;
-    for (const p of D.prefs) html += `<path d="${p.d}" fill="${runs[p.id] ? COLORS[p.color] : '#f7f9fb'}" stroke="#fff" stroke-width="${mk === 'world' ? 0.5 : 1}"/>`;
+    for (const p of D.prefs) html += `<path d="${p.d}" fill="${runs[p.id] ? COLORS[p.color] : '#fff'}" stroke="#1c1b22" stroke-width="${mk === 'world' ? 0.35 : 0.9}" stroke-linejoin="round"/>`;
     return html + '</svg>';
   }
   function renderHome() {
@@ -409,7 +409,7 @@
   }
   /* 待ち時間の演出: 走る形が線で描かれ、その上を点が走る。ヒントも入れ替わる */
   const TIPS = [
-    '赤い線が、これから走る道です。青い点線が目標の形。',
+    '赤い線が、これから走る道です。紫の点線が目標の形。',
     '案は3つ作ります。再現度が高いものを選びましょう。',
     '大きさを「小」にすると、短い距離で走れます。',
     '道が少ない場所だと、形が崩れやすくなります。',
@@ -547,13 +547,13 @@
     });
     const r = plan.routes[plan.sel];
     planLayer.clearLayers();
-    const ideal = L.polygon(toLL(r.ideal, plan.lat0, plan.lon0), { color: '#1e88e5', weight: 2, dashArray: '6 6', fill: false });
+    const ideal = L.polygon(toLL(r.ideal, plan.lat0, plan.lon0), { color: '#7b3fe4', weight: 2, dashArray: '6 6', fill: false });
     const ll = toLL(r.pts.concat([r.pts[0]]), plan.lat0, plan.lon0);
     planLayer.addLayer(L.polyline(ll, { color: '#fff', weight: 9, opacity: .95, lineJoin: 'round' }));   // 白い縁取りで、地図の上でも線がくっきり見える
     const line = L.polyline(ll, { color: '#e8384f', weight: 5, opacity: .95, lineJoin: 'round' });
     planLayer.addLayer(ideal); planLayer.addLayer(line);
     map.fitBounds(line.getBounds(), fitPad()); startRunner(ll);
-    $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（青い点線が目標の形）・走る距離 約${(r.lengthM / 1000).toFixed(1)}km` + (plan.demo ? '・デモ道路' : '');
+    $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（紫の点線が目標の形）・走る距離 約${(r.lengthM / 1000).toFixed(1)}km` + (plan.demo ? '・デモ道路' : '');
     $('#plan-results').hidden = false;
     $('#panel-plan').classList.add('compact'); $('#btn-opts').hidden = false;   // 設定欄をたたんで地図を広く
   }
@@ -776,7 +776,7 @@
     runLayer.addLayer(L.polyline(run.planLL.concat([run.planLL[0]]), { color: '#fff', weight: 9, opacity: .8 }));
     runLayer.addLayer(L.polyline(run.planLL.concat([run.planLL[0]]), { color: '#e8384f', weight: 5, opacity: .6 }));
     run.layerCovered = L.layerGroup().addTo(runLayer);
-    run.line = L.polyline([], { color: '#1e88e5', weight: 4, opacity: .9 }).addTo(runLayer);
+    run.line = L.polyline([], { color: '#7b3fe4', weight: 4, opacity: .9 }).addTo(runLayer);
     L.marker(run.planLL[0], { interactive: false, icon: L.divIcon({ className: '', html: '<div class="start-pin">📍</div>', iconSize: [26, 26], iconAnchor: [13, 24] }) }).addTo(runLayer);
     run.me = null;
     $('#panel-plan').hidden = true; $('#panel-run').hidden = false;
