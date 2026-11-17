@@ -51,7 +51,15 @@
     reset();
     const turn = d => { if (g.over) { reset(); return; } if (d[0] !== -g.dir[0] || d[1] !== -g.dir[1]) g.next = d; };
     let sx = 0, sy = 0;
-    on(cv, 'pointerdown', e => { sx = e.clientX; sy = e.clientY; });
+    const noScroll = e => e.preventDefault();               // 画面が上下に動かないよう固定
+    cv.addEventListener('touchmove', noScroll, { passive: false }); listeners.push([cv, 'touchmove', noScroll]);
+    cv.addEventListener('touchstart', noScroll, { passive: false }); listeners.push([cv, 'touchstart', noScroll]);
+    on(cv, 'pointerdown', e => { sx = e.clientX; sy = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (x) { /* なし */ } });
+    on(cv, 'pointermove', e => {                           // なぞった瞬間に曲がる(指を離さなくてOK)
+      if (!(e.buttons || e.pressure)) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.hypot(dx, dy) >= 18) { turn(Math.abs(dx) > Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]); sx = e.clientX; sy = e.clientY; }
+    });
     on(cv, 'pointerup', e => {
       const dx = e.clientX - sx, dy = e.clientY - sy;
       if (Math.hypot(dx, dy) < 14) { if (g.over) reset(); return; }

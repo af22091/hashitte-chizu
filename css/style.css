@@ -259,3 +259,8 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 #btn-3d { width: 100%; margin-top: 8px; }
 .draft { width: 100%; margin-bottom: 8px; border-style: dashed; }
 .draft[hidden] { display: none; }
+#game { touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; }
+.ld-card { overscroll-behavior: contain; }
+#game-help { margin: 0; font-size: 13px; line-height: 1.6; font-weight: 700; color: var(--ink2); max-width: 30em; }
+#game-help[hidden], #ld-open[hidden] { display: none; }
+#ld-open { width: 100%; padding: 14px; font-size: 16px; }

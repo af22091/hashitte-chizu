@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=20261117d">
+<link rel="stylesheet" href="css/style.css?v=20261117e">
 </head>
 <body>
 <header id="top">
@@ -123,6 +123,7 @@
     <div class="ld-top"><b id="ld-title">コースを作っています</b><button id="ld-cancel" class="link" type="button">やめる</button></div>
     <div id="loader-shape" aria-hidden="true"></div>
     <b id="loader-phase">準備中…</b>
+    <button id="ld-open" class="primary" type="button" hidden>コースを見る</button>
     <div class="bar"><i></i></div>
     <span id="loader-pct" class="muted">0%</span>
     <div id="loader-tip" class="ld-tip" aria-live="polite"></div>
@@ -130,6 +131,7 @@
       <div class="ld-game-tabs" role="tablist">
         <button type="button" data-g="jump">🏃 ジャンプ</button><button type="button" data-g="snake">🍙 へび</button><button type="button" data-g="mole">🐹 もぐら</button>
       </div>
+      <p id="game-help" class="muted" hidden></p>
       <canvas id="game" hidden aria-label="ミニゲーム"></canvas>
     </div>
   </div>
@@ -157,11 +159,11 @@ window.addEventListener('error', function (e) {
 <script src="lib/leaflet/leaflet.js"></script>
 <script src="lib/maplibre/maplibre-gl.js"></script>
 <script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="js/music.js?v=20261117d"></script>
-<script src="js/trivia.js?v=20261117d"></script>
-<script src="js/game.js?v=20261117d"></script>
-<script src="data/embedded.js?v=20261117d"></script>
-<script src="js/route.js?v=20261117d"></script>
-<script src="js/app.js?v=20261117d"></script>
+<script src="js/music.js?v=20261117e"></script>
+<script src="js/trivia.js?v=20261117e"></script>
+<script src="js/game.js?v=20261117e"></script>
+<script src="data/embedded.js?v=20261117e"></script>
+<script src="js/route.js?v=20261117e"></script>
+<script src="js/app.js?v=20261117e"></script>
 </body>
 </html>

@@ -435,15 +435,21 @@
     }, 4000);
   }
   function stopLoader() {
-    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true;
+    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#ld-open').hidden = true;
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.remove('on'));
   }
+  const GAME_HELP = {
+    jump: '遊び方：画面をタップでジャンプ。障害物をよけて、できるだけ遠くまで走ろう。',
+    snake: '遊び方：指で上下左右になぞると、向きが変わります。おにぎりを食べて長くなろう。壁や自分にぶつかるとおしまい。',
+    mole: '遊び方：出てきたもぐらをタップ！ 早くたたくほど高得点。',
+  };
   $('.ld-game-tabs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const cv = $('#game');
-    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
+    const hp = $('#game-help');
+    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; hp.hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.toggle('on', x === b));
-    cv.hidden = false; MiniGame.start(cv, b.dataset.g);
+    cv.hidden = false; hp.hidden = false; hp.textContent = GAME_HELP[b.dataset.g]; MiniGame.start(cv, b.dataset.g);
     cv.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
   $('#ld-cancel').onclick = async () => {
@@ -509,11 +515,18 @@
       if (tok !== plan.token) return;
       plan.routes = routes; plan.sel = 0; plan.lat0 = lat0; plan.lon0 = lon0; plan.demo = src === 'demo';
       Music.sfx('ok'); saveDraft(); showRoutes();
+      if (!$('#game').hidden && !$('#loading').hidden) {      // ゲーム中は、勢いで押してもコース画面に移らないよう、ボタンで進む
+        MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true;
+        $('#loader-phase').textContent = '🎉 コースができました！'; $('#loading .bar i').style.width = '100%'; $('#loader-pct').textContent = '100%';
+        const ob = $('#ld-open'); ob.hidden = false; ob.disabled = true; setTimeout(() => { ob.disabled = false; }, 1200);
+        ob.onclick = () => { $('#loading').hidden = true; stopLoader(); };
+        plan.holdLoader = true;
+      }
     } catch (e) {
       if (tok !== plan.token) return;
       $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
     } finally {
-      if (tok === plan.token) { plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#loading').hidden = true; stopLoader(); }
+      if (tok === plan.token) { plan.busy = false; if (plan.holdLoader) { plan.holdLoader = false; } else { $('#loading').hidden = true; stopLoader(); } Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; }
     }
   }
   /* 地図を合わせるときの余白(パネルに隠れない位置に収める) */
