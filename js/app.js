@@ -314,6 +314,7 @@
     return ok;
   }
   function clearCourse() {
+    stopRunner();
     plan.routes = []; planLayer && planLayer.clearLayers(); $('#plan-results').hidden = true;
     $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true; refreshDraft();
   }
@@ -400,6 +401,7 @@
     clearCourse(); leaveMap();
   };
   function leaveMap() {
+    stopRunner();
     mode = 'board'; if (startMarker) { startMarker.remove(); }
     planLayer && planLayer.clearLayers(); runLayer && runLayer.clearLayers();
     show('board'); renderBoard();
@@ -435,23 +437,24 @@
     }, 4000);
   }
   function stopLoader() {
-    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#ld-open').hidden = true;
+    clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#dpad').hidden = true; $('#ld-open').hidden = true;
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.remove('on'));
   }
   const GAME_HELP = {
     jump: '遊び方：画面をタップでジャンプ。障害物をよけて、できるだけ遠くまで走ろう。',
-    snake: '遊び方：指で上下左右になぞると、向きが変わります。おにぎりを食べて長くなろう。壁や自分にぶつかるとおしまい。',
+    snake: '遊び方：下の十字キー、または指でなぞって向きを変えます。おにぎりを食べて長くなろう。壁や自分にぶつかるとおしまい。',
     mole: '遊び方：出てきたもぐらをタップ！ 早くたたくほど高得点。',
   };
   $('.ld-game-tabs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     const cv = $('#game');
     const hp = $('#game-help');
-    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; hp.hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
+    if (b.classList.contains('on')) { MiniGame.stop(); cv.hidden = true; hp.hidden = true; $('#dpad').hidden = true; b.classList.remove('on'); return; }   // もう一度押すと、とじる
     document.querySelectorAll('.ld-game-tabs button').forEach(x => x.classList.toggle('on', x === b));
-    cv.hidden = false; hp.hidden = false; hp.textContent = GAME_HELP[b.dataset.g]; MiniGame.start(cv, b.dataset.g);
+    cv.hidden = false; hp.hidden = false; hp.textContent = GAME_HELP[b.dataset.g]; $('#dpad').hidden = b.dataset.g !== 'snake'; MiniGame.start(cv, b.dataset.g);
     cv.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
+  $('#dpad').addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b) { e.preventDefault(); MiniGame.dir(b.dataset.d); } });
   $('#ld-cancel').onclick = async () => {
     if (!await askConfirm('コース作成をやめますか？', 'ここまでの作成は中止されます。', 'やめる', '続ける')) return;
     plan.token++; plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#loading').hidden = true; stopLoader();
@@ -516,7 +519,7 @@
       plan.routes = routes; plan.sel = 0; plan.lat0 = lat0; plan.lon0 = lon0; plan.demo = src === 'demo';
       Music.sfx('ok'); saveDraft(); showRoutes();
       if (!$('#game').hidden && !$('#loading').hidden) {      // ゲーム中は、勢いで押してもコース画面に移らないよう、ボタンで進む
-        MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true;
+        MiniGame.stop(); $('#game').hidden = true; $('#game-help').hidden = true; $('#dpad').hidden = true;
         $('#loader-phase').textContent = '🎉 コースができました！'; $('#loading .bar i').style.width = '100%'; $('#loader-pct').textContent = '100%';
         const ob = $('#ld-open'); ob.hidden = false; ob.disabled = true; setTimeout(() => { ob.disabled = false; }, 1200);
         ob.onclick = () => { $('#loading').hidden = true; stopLoader(); };
@@ -549,13 +552,35 @@
     planLayer.addLayer(L.polyline(ll, { color: '#fff', weight: 9, opacity: .95, lineJoin: 'round' }));   // 白い縁取りで、地図の上でも線がくっきり見える
     const line = L.polyline(ll, { color: '#e8384f', weight: 5, opacity: .95, lineJoin: 'round' });
     planLayer.addLayer(ideal); planLayer.addLayer(line);
-    map.fitBounds(line.getBounds(), fitPad());
+    map.fitBounds(line.getBounds(), fitPad()); startRunner(ll);
     $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（青い点線が目標の形）・走る距離 約${(r.lengthM / 1000).toFixed(1)}km` + (plan.demo ? '・デモ道路' : '');
     $('#plan-results').hidden = false;
     $('#panel-plan').classList.add('compact'); $('#btn-opts').hidden = false;   // 設定欄をたたんで地図を広く
   }
+  let runnerRaf = 0;
+  function stopRunner() { cancelAnimationFrame(runnerRaf); runnerRaf = 0; }
+  function startRunner(ll) {                                 // 人型アイコンがコースを一周なぞる
+    stopRunner();
+    const cum = [0]; for (let i = 1; i < ll.length; i++) cum.push(cum[i - 1] + Math.hypot(ll[i][0] - ll[i - 1][0], ll[i][1] - ll[i - 1][1]));
+    const total = cum[cum.length - 1] || 1;
+    const mk = L.marker(ll[0], { interactive: false, keyboard: false, icon: L.divIcon({ className: '', html: '<div class="runner">🏃</div>', iconSize: [30, 30], iconAnchor: [15, 22] }) });
+    planLayer.addLayer(mk);
+    const trail = L.polyline([ll[0]], { color: '#ffd23f', weight: 5, opacity: .95, lineJoin: 'round' }); planLayer.addLayer(trail);
+    const dur = 9000; let t0 = performance.now(), i = 1;
+    const tick = now => {
+      if (!mk._map) return;
+      const f = ((now - t0) % (dur + 1500)) / dur;
+      if (f >= 1) { mk.setLatLng(ll[ll.length - 1]); runnerRaf = requestAnimationFrame(tick); return; }
+      const d = f * total; let k = 1; while (k < cum.length - 1 && cum[k] < d) k++;
+      const u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), a = ll[k - 1], b = ll[k];
+      const p = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+      mk.setLatLng(p); trail.setLatLngs(ll.slice(0, k).concat([p]));
+      runnerRaf = requestAnimationFrame(tick);
+    };
+    runnerRaf = requestAnimationFrame(tick);
+  }
   $('#btn-opts').onclick = () => { $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true; };
-  $('#btn-go').onclick = () => openRun(plan.routes[plan.sel]);
+  $('#btn-go').onclick = () => { stopRunner(); openRun(plan.routes[plan.sel]); };
 
   /* ---------- 3D・衛星ビューア: 作ったコースの上空を、一周ぶん飛んで見られる ---------- */
   let v3 = null, v3raf = 0, v3play = true, v3style = 'map', v3t = 0;
@@ -605,19 +630,25 @@
         m.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: ll } } });
         m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#fff', 'line-width': 11 } });
         m.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#e8384f', 'line-width': 6 } });
-        m.addSource('me', { type: 'geojson', data: { type: 'Point', coordinates: start } });
-        m.addLayer({ id: 'route-me', type: 'circle', source: 'me', paint: { 'circle-radius': 9, 'circle-color': '#1e88e5', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } });
+        
+        
         applyV3Style();
-        let last = performance.now(), brg = bearing(start, at(150));
-        const speed = total / 45;                                     // 一周 約45秒
+        // カメラは固定(酔わないように回転・追従しない)。コース全体が見える角度で止めて、人型アイコンだけが走る
+        const bb = ll.reduce((q, p) => [Math.min(q[0], p[0]), Math.min(q[1], p[1]), Math.max(q[2], p[0]), Math.max(q[3], p[1])], [180, 90, -180, -90]);
+        m.fitBounds([[bb[0], bb[1]], [bb[2], bb[3]]], { pitch: 45, bearing: 0, padding: { top: 90, bottom: 60, left: 40, right: 40 }, duration: 0 });
+        m.addSource('done', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [start, start] } } });
+        m.addLayer({ id: 'route-done', type: 'line', source: 'done', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#ffd23f', 'line-width': 6 } });
+        const el = document.createElement('div'); el.className = 'runner'; el.textContent = '🏃';
+        const me = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(start).addTo(m);
+        let last = performance.now();
+        const speed = total / 12;                                     // 一周 約12秒
         const tick = now => {
           const dt = Math.min(0.1, (now - last) / 1000); last = now;
           if (v3play) {
-            v3t += speed * dt; const p = at(v3t);
-            const tb = bearing(p, at(v3t + Math.max(120, total * 0.04)));
-            let d = ((tb - brg + 540) % 360) - 180; brg = (brg + d * Math.min(1, dt * 1.6) + 360) % 360;
-            m.getSource('me').setData({ type: 'Point', coordinates: p });
-            m.jumpTo({ center: p, bearing: brg, pitch: 62, zoom: 16.2 });
+            v3t += speed * dt; const p = at(v3t), k = Math.max(0, cum.findIndex(c => c >= (v3t % total)));
+            me.setLngLat(p);
+            const d = v3t % total, idx = cum.findIndex(c => c > d);
+            m.getSource('done').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: ll.slice(0, Math.max(1, idx)).concat([p]) } });
           }
           v3raf = requestAnimationFrame(tick);
         };

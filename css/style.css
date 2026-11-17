@@ -264,3 +264,9 @@ button.mini { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
 #game-help { margin: 0; font-size: 13px; line-height: 1.6; font-weight: 700; color: var(--ink2); max-width: 30em; }
 #game-help[hidden], #ld-open[hidden] { display: none; }
 #ld-open { width: 100%; padding: 14px; font-size: 16px; }
+#dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 6px; justify-content: center; touch-action: manipulation; }
+#dpad[hidden] { display: none; }
+#dpad button { padding: 0; font-size: 22px; border-radius: 14px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+#dpad [data-d="up"] { grid-column: 2; grid-row: 1; } #dpad [data-d="left"] { grid-column: 1; grid-row: 2; }
+#dpad [data-d="down"] { grid-column: 2; grid-row: 2; } #dpad [data-d="right"] { grid-column: 3; grid-row: 2; }
+.runner { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); pointer-events: none; }

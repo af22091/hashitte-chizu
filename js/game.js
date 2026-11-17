@@ -4,11 +4,11 @@
   const BEST = k => 'hashitte-game-best-' + k;
   const best = k => { try { return +localStorage.getItem(BEST(k)) || 0; } catch (e) { return 0; } };
   const saveBest = (k, v) => { if (v > best(k)) { try { localStorage.setItem(BEST(k), v); } catch (e) { /* なし */ } } };
-  let cv, c, raf = null, timer = null, g = null, kind = null, listeners = [];
+  let snakeTurn = null, cv, c, raf = null, timer = null, g = null, kind = null, listeners = [];
   const on = (t, ev, fn) => { t.addEventListener(ev, fn); listeners.push([t, ev, fn]); };
   function clearAll() {
     if (raf) cancelAnimationFrame(raf); raf = null; clearInterval(timer); timer = null;
-    listeners.forEach(([t, ev, fn]) => t.removeEventListener(ev, fn)); listeners = [];
+    listeners.forEach(([t, ev, fn]) => t.removeEventListener(ev, fn)); listeners = []; snakeTurn = null;
   }
   function overlay(W, H, title, sub) {
     c.fillStyle = 'rgba(16,41,59,.68)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.textAlign = 'center';
@@ -50,6 +50,7 @@
     const food = () => { let p; do { p = [Math.floor(Math.random() * N), Math.floor(Math.random() * N)]; } while (g.body.some(b => b[0] === p[0] && b[1] === p[1])); g.food = p; };
     reset();
     const turn = d => { if (g.over) { reset(); return; } if (d[0] !== -g.dir[0] || d[1] !== -g.dir[1]) g.next = d; };
+    snakeTurn = turn;
     let sx = 0, sy = 0;
     const noScroll = e => e.preventDefault();               // 画面が上下に動かないよう固定
     cv.addEventListener('touchmove', noScroll, { passive: false }); listeners.push([cv, 'touchmove', noScroll]);
@@ -122,6 +123,7 @@
   root.MiniGame = {
     start(canvas, k) { this.stop(); cv = canvas; kind = k; (GAMES[k] || jumpGame)(); },
     stop() { clearAll(); },
+    dir(n) { if (snakeTurn) snakeTurn({ up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[n]); },
     kinds: ['jump', 'snake', 'mole'],
   };
 })(window);
