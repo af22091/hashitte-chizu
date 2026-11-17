@@ -266,27 +266,16 @@
   function ensureMap() {
     if (map) return;
     map = L.map('map', { zoomControl: true, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 160, wheelDebounceTime: 60 });
-    /* 地図は2種類: きれい(ベクター地図 OpenFreeMap) / 衛星(Esri World Imagery)。
-       ベクター地図が読み込めない端末では、自動で標準(OSM)の地図に切り替える */
-    const bases = {};
-    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' });
-    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
-    let vec = null, webgl = false;
-    try { webgl = !!document.createElement('canvas').getContext('webgl'); } catch (e) { /* なし */ }
-    if (webgl && window.maplibregl && L.maplibreGL) {
-      vec = L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/liberty', attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
-    }
-    bases['きれい'] = vec || osm; bases['衛星'] = sat;
-    let pick = 'きれい'; try { pick = localStorage.getItem('hashitte-basemap3') || pick; } catch (e) { /* 既定 */ }
-    if (!bases[pick]) pick = 'きれい';
+    /* 地図は2種類: 「地図」(標準) / 「航空写真」 */
+    const bases = {
+      '地図': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }),
+      '航空写真': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }),
+    };
+    let pick = '地図'; try { pick = localStorage.getItem('hashitte-basemap4') || pick; } catch (e) { /* 既定 */ }
+    if (!bases[pick]) pick = '地図';
     bases[pick].addTo(map);
-    if (vec && pick === 'きれい') {
-      let ok = false; const fallback = () => { if (!ok && map.hasLayer(vec)) { map.removeLayer(vec); osm.addTo(map); bases['きれい'] = osm; toast('きれいな地図を読み込めなかったため、標準の地図にしました'); } };
-      try { const m = vec.getMaplibreMap(); m.on('load', () => { ok = true; }); m.on('error', () => { if (!ok) fallback(); }); } catch (e) { fallback(); }
-      setTimeout(fallback, 12000);
-    }
     L.control.layers(bases, null, { position: 'topright', collapsed: true }).addTo(map);
-    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap3', e.name); } catch (err) { /* なし */ } });
+    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap4', e.name); } catch (err) { /* なし */ } });
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
     map.setView(s, 15);
@@ -593,6 +582,7 @@
     if (!v3 || !v3.isStyleLoaded()) return;
     const sat = v3style === 'sat';
     if (v3.getLayer('esri')) v3.setLayoutProperty('esri', 'visibility', sat ? 'visible' : 'none');
+    if (v3.getLayer('osm')) v3.setLayoutProperty('osm', 'visibility', sat ? 'none' : 'visible');
     for (const l of v3.getStyle().layers) {
       if (['background', 'fill', 'line'].includes(l.type) && !l.id.startsWith('route')) {
         try { v3.setLayoutProperty(l.id, 'visibility', sat ? 'none' : 'visible'); } catch (e) { /* なし */ }
@@ -617,8 +607,12 @@
       const start = ll[0];
       v3 = new maplibregl.Map({ container: 'map3d', style: 'https://tiles.openfreemap.org/styles/liberty', center: start, zoom: 15.5, pitch: 62, bearing: 0, maxPitch: 80, attributionControl: { compact: true } });
       const m = v3;
-      m.on('error', e => { if (!m.isStyleLoaded()) v3msg('地図データを読み込めませんでした。通信状況を確認してください'); });
-      m.on('load', () => {
+      let v3loaded = false, v3fell = false;
+      const v3fallback = () => { if (v3fell || v3loaded || v3 !== m) return; v3fell = true; v3msg('標準の地図で表示します…'); m.setStyle(OSM_STYLE); };   // きれいな地図が読めない端末では、標準の地図で
+      setTimeout(v3fallback, 8000);
+      m.on('error', () => { if (!v3loaded) v3fallback(); });
+      m.on('style.load', () => {
+        v3loaded = true; if (m.getSource('route')) return;
         v3msg('');
         try {
           m.addSource('esri', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
@@ -669,6 +663,7 @@
   }
 
   /* ---------- ナビ表示: 進む向きが上になる、Googleマップのナビのような主観画面 ---------- */
+  const OSM_STYLE = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: '© OpenStreetMap contributors' } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] };
   const NV = { map: null, pts: null, idx: 0, me: null, brg: 0, last: null, open: false };
   const bearingLL = (a, b) => {                                  // a,b = [lat,lon] → 方位(度)
     const r = Math.PI / 180, y = Math.sin((b[1] - a[1]) * r) * Math.cos(b[0] * r);
@@ -745,7 +740,6 @@
     try {
       const m = NV.map = new maplibregl.Map({ container: 'nav-map', style: 'https://tiles.openfreemap.org/styles/liberty', center: [ll[0][1], ll[0][0]], zoom: 18, pitch: 58, bearing: NV.brg, attributionControl: { compact: true } });
       let loaded = false, fell = false;
-      const OSM_STYLE = { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: '© OpenStreetMap contributors' } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] };
       const fallback = () => { if (fell || loaded || !NV.map) return; fell = true; $('#nav-status').textContent = '標準の地図に切り替えました'; m.setStyle(OSM_STYLE); };
       setTimeout(fallback, 8000);
       m.on('style.load', () => {
