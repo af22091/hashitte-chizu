@@ -322,6 +322,7 @@
   history.replaceState({ a: 1 }, ''); history.pushState({ a: 2 }, '');
   window.addEventListener('popstate', () => {          // 端末の「戻る」を押しても、すぐには画面を離れない
     history.pushState({ a: 2 }, '');
+    if (!$('#nav').hidden) return closeNav();
     if ($('#view3d') && !$('#view3d').hidden) return close3d();
     if (mode === 'run') $('#run-back').click();
     else if (mode === 'plan') $('#plan-back').click();
@@ -665,7 +666,103 @@
 
   function setStatus(text, kind) {
     const el = $('#run-status'); el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : '');
+    const ns = $('#nav-status'); if (ns) { ns.textContent = text; ns.className = 'status' + (kind ? ' ' + kind : ''); }
   }
+
+  /* ---------- ナビ表示: 進む向きが上になる、Googleマップのナビのような主観画面 ---------- */
+  const NV = { map: null, pts: null, idx: 0, me: null, brg: 0, last: null, open: false };
+  const bearingLL = (a, b) => {                                  // a,b = [lat,lon] → 方位(度)
+    const r = Math.PI / 180, y = Math.sin((b[1] - a[1]) * r) * Math.cos(b[0] * r);
+    const x = Math.cos(a[0] * r) * Math.sin(b[0] * r) - Math.sin(a[0] * r) * Math.cos(b[0] * r) * Math.cos((b[1] - a[1]) * r);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  };
+  const angDiff = (a, b) => ((b - a + 540) % 360) - 180;        // +なら右へ
+  function resample(ll, step) {                                  // コースを一定間隔(m)の点列にする
+    const out = [ll[0]]; let acc = 0;
+    for (let i = 1; i < ll.length; i++) {
+      let a = out[out.length - 1], b = ll[i], d = haversine(a, b);
+      while (d >= step) { const f = step / d; a = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; out.push(a); d = haversine(a, b); }
+    }
+    return out;
+  }
+  const DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
+  function nextTurn() {                                          // 次に曲がる場所を探す(10m刻みの点列で判定)
+    const R = NV.pts, i = NV.idx, n = R.length;
+    for (let j = i + 4; j < Math.min(n - 3, i + 60); j++) {
+      const b1 = bearingLL(R[j - 3], R[j - 1]), b2 = bearingLL(R[j], R[j + 2]), d = angDiff(b1, b2);
+      if (Math.abs(d) > 40) return { dist: (j - i) * 10, d };
+    }
+    return null;
+  }
+  function turnText(t) {
+    const a = Math.abs(t.d), side = t.d > 0 ? '右' : '左';
+    return a > 135 ? 'Uターン' : a > 100 ? `大きく${side}へ` : a > 60 ? `${side}折` : `${side}へ`;
+  }
+  function navRender() {
+    const R = NV.pts; if (!R) return;
+    const left = Math.max(0, R.length - 1 - NV.idx) * 10, t = nextTurn();
+    let arrow = '⬆', text;
+    if (left < 40 && run.tracker.progress > 0.6) text = 'もうすぐゴールです';
+    else if (t) { arrow = t.d > 0 ? '↱' : '↰'; if (Math.abs(t.d) > 135) arrow = '↩'; text = `${t.dist < 15 ? 'まもなく' : Math.round(t.dist / 10) * 10 + 'm先'} ${turnText(t)}`; }
+    else text = 'まっすぐ進む';
+    $('#nav-arrow').textContent = arrow; $('#nav-text').textContent = text;
+    $('#nav-left').textContent = fmtKm(run.route.lengthM * (1 - run.tracker.progress));
+    $('#nav-cov').textContent = Math.round(run.tracker.progress * 100) + '%';
+  }
+  function navCovered() {
+    if (!NV.map || !NV.map.getSource('cov')) return;
+    const T = run.tracker, feats = [];
+    for (const [a, b] of T.coveredRuns()) {
+      const pts = []; for (let i = a; i <= Math.min(b + 1, T.n - 1); i++) { const p = RE.toLatLng(T.s[i][0], T.s[i][1], run.lat0, run.lon0); pts.push([p[1], p[0]]); }
+      if (pts.length > 1) feats.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: pts } });
+    }
+    NV.map.getSource('cov').setData({ type: 'FeatureCollection', features: feats });
+  }
+  function navUpdate(lat, lon, acc) {
+    if (!NV.open || !NV.map) return;
+    const R = NV.pts; let best = NV.idx, bd = 1e9;
+    for (let k = Math.max(0, NV.idx - 3); k < Math.min(R.length, NV.idx + 30); k++) { const d = haversine([lat, lon], R[k]); if (d < bd) { bd = d; best = k; } }
+    if (bd < 40) NV.idx = best;
+    // 向き: 直前の位置からの移動方向。止まっているときは、コースの進行方向
+    if (NV.last && haversine(NV.last, [lat, lon]) >= 4) { NV.brg = bearingLL(NV.last, [lat, lon]); NV.last = [lat, lon]; }
+    else if (!NV.last) NV.last = [lat, lon];
+    else if (NV.idx + 3 < R.length) NV.brg = bearingLL(R[NV.idx], R[NV.idx + 3]);
+    if (NV.me) NV.me.setLngLat([lon, lat]);
+    NV.map.easeTo({ center: [lon, lat], bearing: NV.brg, pitch: 58, zoom: 18, duration: 900, easing: x => x });
+    $('#nav-acc').textContent = acc ? `GPS ±${Math.round(acc)}m` : 'GPS';
+    navCovered(); navRender();
+  }
+  function closeNav() {
+    NV.open = false; $('#nav').hidden = true;
+    if (NV.map) { try { NV.map.remove(); } catch (e) { /* なし */ } NV.map = null; }
+  }
+  function openNav() {
+    if (!run.route) return;
+    if (!window.maplibregl) return toast('ナビ表示を読み込めませんでした');
+    NV.open = true; NV.last = null; NV.idx = 0; $('#nav').hidden = false;
+    const ll = run.planLL.concat([run.planLL[0]]); NV.pts = resample(ll, 10);
+    NV.brg = bearingLL(NV.pts[0], NV.pts[Math.min(3, NV.pts.length - 1)]);
+    $('#nav-acc').textContent = 'GPS'; $('#nav-run').textContent = $('#btn-run').textContent;
+    try {
+      const m = NV.map = new maplibregl.Map({ container: 'nav-map', style: 'https://tiles.openfreemap.org/styles/liberty', center: [ll[0][1], ll[0][0]], zoom: 18, pitch: 58, bearing: NV.brg, attributionControl: { compact: true } });
+      m.on('load', () => {
+        const line = ll.map(p => [p[1], p[0]]);
+        m.addSource('rt', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: line } } });
+        m.addSource('cov', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        const L2 = (id, src, color, w) => m.addLayer({ id, type: 'line', source: src, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': color, 'line-width': w } });
+        L2('rt-casing', 'rt', '#fff', 14); L2('rt-line', 'rt', '#e8384f', 8); L2('cov-line', 'cov', '#2fa36b', 8);
+        const el = document.createElement('div'); el.className = 'nav-me'; el.innerHTML = '<i></i>';
+        NV.me = new maplibregl.Marker({ element: el, pitchAlignment: 'viewport', rotationAlignment: 'viewport' }).setLngLat(line[0]).addTo(m);
+        const p = run.trail.length ? run.trail[run.trail.length - 1] : null;
+        if (p) navUpdate(p[0], p[1], null); else navRender();
+      });
+      m.on('error', () => { if (!m.isStyleLoaded()) { const ns = $('#nav-status'); ns.textContent = '地図を読み込み中です…（通信状況を確認してください）'; } });
+    } catch (e) { closeNav(); toast('この端末ではナビ表示を開始できませんでした'); }
+  }
+  $('#btn-nav').onclick = openNav;
+  $('#nav-close').onclick = closeNav;
+  $('#nav-run').onclick = () => $('#btn-run').click();
+  new MutationObserver(() => { $('#nav-run').textContent = $('#btn-run').textContent; }).observe($('#btn-run'), { childList: true, characterData: true, subtree: true });
   function openRun(route) {
     mode = 'run';
     Object.assign(run, { route, lat0: plan.lat0, lon0: plan.lon0, trail: [], elapsed: 0, running: false, sim: false, simPos: 0, lastN: -1 });
@@ -716,7 +813,7 @@
     if (r.state === 'wrongWay') setStatus('進む向きが違うか、道をショートカットしています。赤い線の順番どおりに進んでください。', 'warn');
     else if (r.state === 'off') setStatus(`コースから約${Math.round(r.off)}m離れています。赤い線に戻ってください。`, 'warn');
     else setStatus(`いい調子です！ あと約${Math.max(0, (run.route.lengthM * (1 - run.tracker.progress) / 1000)).toFixed(1)}km`, 'ok');
-    updateStats();
+    updateStats(); navUpdate(lat, lon, acc);
     if (r.done) completeRun();
   }
   async function startRun() {
@@ -754,14 +851,14 @@
   $('#btn-quit').onclick = async () => {
     const force = $('#btn-quit').dataset.force; delete $('#btn-quit').dataset.force;
     if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめますか？', 'ここまでの記録は保存されません。', 'やめる', 'このまま走る')) return;
-    stopTracking(); runLayer.clearLayers(); mode = 'plan';
+    stopTracking(); closeNav(); runLayer.clearLayers(); mode = 'plan';
     $('#panel-run').hidden = true; $('#panel-plan').hidden = false;
     if (startMarker) startMarker.addTo(map); showRoutes();
   };
   $('#run-back').onclick = () => $('#btn-quit').click();
   /* GPSで一周できたときだけ保存される */
   function completeRun() {
-    stopTracking();
+    stopTracking(); closeNav();
     const keep = []; let prev = null;
     for (const p of run.trail) { if (!prev || haversine(prev, p) >= 8) { keep.push([+p[0].toFixed(6), +p[1].toFixed(6)]); prev = p; } }
     const id = plan.pref.id, mk = plan.mk || cur;
