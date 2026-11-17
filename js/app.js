@@ -116,6 +116,18 @@
     $('#search-list').innerHTML = prefs.map(p => `<option value="${p.name}">${p.en || ''}</option>`).join('');
     $('#board-hint').textContent = MODES[mk].hint;
     show('board'); renderBoard();
+    fitBase();
+  }
+  /* 地図の実際の大きさに、表示範囲をぴったり合わせる(余白を詰めて、最初から大きく見せる) */
+  function fitBase() {
+    try {
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      $('#board').querySelectorAll('.piece, .frame').forEach(el => { const q = el.getBBox(); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x + q.width); y1 = Math.max(y1, q.y + q.height); });
+      const bb = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }; if (!(bb.width > 0 && bb.height > 0)) return;
+      const px = bb.width * 0.012, py = bb.height * 0.012;
+      base = { x: bb.x - px, y: bb.y - py, w: bb.width + 2 * px, h: bb.height + 2 * py };
+      view = Object.assign({}, base); applyView();
+    } catch (e) { /* 元の表示範囲のまま */ }
   }
   function goHome() {
     cur = null; closeSheet(); show('home'); renderHome();

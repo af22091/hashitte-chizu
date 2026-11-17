@@ -343,3 +343,6 @@ button.icon { box-shadow: 2px 2px 0 var(--ink); }
 .leaflet-control-layers, .leaflet-bar { border: 2.5px solid var(--ink) !important; box-shadow: 2px 2px 0 var(--ink) !important; }
 .start-pin { filter: drop-shadow(1px 2px 0 rgba(28,27,34,.6)); }
 #btn-go { width: 100%; padding: 14px; font-size: 17px; }
+
+#board-wrap { padding: 0 2px; }
+#board-hint { padding: 2px 16px 8px; }
