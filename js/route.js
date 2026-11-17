@@ -299,11 +299,17 @@
   }
 
   /* ---------- フィット ---------- */
-  function routeFor(g, router, ideal, tol, stepM) {
+  function routeFor(g, router, ideal, tol, stepM, start) {
     // 形の線から離れる道ほど高コスト → 経路が輪郭に沿う
     const cost = new Float64Array(g.edges.length);
     for (let e = 0; e < g.edges.length; e++) cost[e] = g.edges[e][2] * (1 + distPtPoly(g.mx[e], g.my[e], ideal, true) / tol);
-    const samples = samplePoly(ideal, stepM, true), seq = [];
+    let samples = samplePoly(ideal, stepM, true);
+    if (start && samples.length) {            // スタート地点にいちばん近い点から始めて、ぐるっと回って戻る(現在地の道を必ず通る)
+      let bi = 0, bd = Infinity;
+      samples.forEach(([x, y], i) => { const d = Math.hypot(x - start[0], y - start[1]); if (d < bd) { bd = d; bi = i; } });
+      samples = samples.slice(bi).concat(samples.slice(0, bi));
+    }
+    const seq = [];
     for (const [x, y] of samples) { const r = g.nodeGrid.nearest(x, y); if (r.i >= 0) seq.push(r.i); }
     if (seq.length < 4) return null;
     seq.push(seq[0]);
@@ -341,35 +347,58 @@
     if (g.xs.length < 50) throw new Error('この周辺の道路が少なすぎます。別の場所を選んでください。');
     const router = makeRouter(g), tol = sizeM * 0.01;
     const angles = []; for (let a = -maxRot; a <= maxRot; a += rotStep) angles.push(a);
-    const shifts = []; for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) shifts.push([dx * sizeM * 0.25, dy * sizeM * 0.25]);
 
-    // 1) 道路がよく当たる配置を粗く探す
+    // 1) 配置の候補を粗く採点する。
+    //    ① 形の輪郭が「現在地(スタート)」を通るように置く(輪郭上の24か所を現在地に合わせる)
+    //    ② 形の中心を現在地に置く(従来)。 ②は現在地から輪郭までの距離を減点する
     const base = samplePoly(outline, 0.04, true); // 正規化座標でのサンプル
+    const NA = 24, maxShift = sizeM * 0.35;
+    const trimmed = (rot, ox, oy) => {            // 道路から離れた点の影響を頭打ちにした平均距離(空白区間があっても極端に悪くならない)
+      let t = 0; const cap = sizeM * 0.04;
+      for (const [x, y] of rot) t += Math.min(cap, g.coverGrid.nearest(x + ox, y + oy).d);
+      return t / rot.length;
+    };
     const cands = [];
     for (const ang of angles) {
       const rot = transformOutline(base, sizeM, ang, 0, 0);
-      for (const [dx, dy] of shifts) {
-        let s = 0;
-        for (const [x, y] of rot) s += g.coverGrid.nearest(x + start[0] + dx, y + start[1] + dy).d;
-        cands.push({ score: s / rot.length, ang, dx, dy });
+      for (let k = 0; k < NA; k++) {
+        const p = rot[Math.floor(k * rot.length / NA)];
+        const dx = start[0] - p[0], dy = start[1] - p[1];
+        if (Math.hypot(dx, dy) > maxShift) continue;
+        cands.push({ score: trimmed(rot, dx, dy), ang, dx, dy, anchored: true });
+      }
+      for (const fx of [-1, 0, 1]) for (const fy of [-1, 0, 1]) {
+        const dx = fx * sizeM * 0.2, dy = fy * sizeM * 0.2;
+        let dmin = Infinity; for (const [x, y] of rot) dmin = Math.min(dmin, Math.hypot(x + dx - start[0], y + dy - start[1]));
+        cands.push({ score: trimmed(rot, dx, dy) + 0.25 * dmin, ang, dx, dy, anchored: false });
       }
     }
     cands.sort((a, b) => a.score - b.score);
+    // ほぼ同じ配置の重複を除いて、違いのある案を選ぶ
+    const top = [];
+    for (const c of cands) {
+      if (top.length >= nTop) break;
+      if (top.some(t => t.ang === c.ang && Math.hypot(t.dx - c.dx, t.dy - c.dy) < sizeM * 0.08)) continue;
+      top.push(c);
+    }
 
     // 2) 上位候補だけ実際にルートを作って評価
-    const results = [], top = cands.slice(0, nTop);
+    const results = [];
     for (let k = 0; k < top.length; k++) {
       const c = top[k];
       if (onProgress) onProgress((k + 0.2) / top.length, `${k + 1}/${top.length} 案を計算中…`);
       await tick();
       const ideal = transformOutline(outline, sizeM, c.ang, start[0] + c.dx, start[1] + c.dy);
-      const pts = routeFor(g, router, ideal, tol, Math.max(30, sizeM / 30));
+      const pts = routeFor(g, router, ideal, tol, Math.max(30, sizeM / 30), start);
       if (!pts) continue;
       const ev = evaluate(pts, ideal);
-      results.push({ pts, ideal, angle: c.ang, lengthM: polyLength(pts, true), iou: ev.iou, dev95: ev.dev95 });
+      const startDist = distPtPoly(start[0], start[1], pts, true);   // 現在地からコースまでの距離
+      results.push({ pts, ideal, angle: c.ang, lengthM: polyLength(pts, true), iou: ev.iou, dev95: ev.dev95, startDist });
     }
     if (onProgress) onProgress(1, '完了');
-    results.sort((a, b) => b.iou - a.iou);
+    // 形の再現度を最優先にしつつ、現在地から遠いコースは下げる(100mを超えた分を減点)
+    const rank = r => r.iou - Math.max(0, r.startDist - 100) / sizeM;
+    results.sort((a, b) => rank(b) - rank(a));
     if (!results.length) throw new Error('ルートを作れませんでした。別の場所か大きさを試してください。');
     return results.slice(0, keep);
   }

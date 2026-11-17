@@ -8,12 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
-<link rel="stylesheet" href="css/style.css?v=20261111f">
+<link rel="stylesheet" href="css/style.css?v=20261117a">
 </head>
 <body>
 <header id="top">
   <button id="btn-home" class="icon" aria-label="モード選択へ" title="モード選択へ" hidden>◀</button>
   <h1>はしって地図あつめ</h1>
+  <button id="btn-music" class="icon" aria-label="音楽のオン・オフ" title="音楽">♪</button>
   <div id="counter" title="完成した数" hidden><b id="count-done">0</b> / <span id="count-total">47</span></div>
   <button id="btn-menu" class="icon" aria-label="メニュー">⋯</button>
   <div id="menu" hidden>
@@ -75,7 +76,8 @@
           <div class="loader-text"><b id="loader-phase">準備中…</b><span id="loader-tip"></span></div>
         </div>
         <div class="bar"><i></i></div>
-        <div class="loader-pct muted"><span id="loader-pct">0%</span></div>
+        <div class="loader-pct"><button id="btn-game" class="mini" type="button">🏃 待ち時間であそぶ</button><span id="loader-pct" class="muted">0%</span></div>
+        <canvas id="game" hidden aria-label="ミニゲーム: タップでジャンプ"></canvas>
       </div>
       <div id="plan-results" hidden>
         <div id="chips"></div>
@@ -129,8 +131,11 @@ window.addEventListener('error', function (e) {
 });
 </script>
 <script src="lib/leaflet/leaflet.js"></script>
-<script src="data/embedded.js?v=20261111f"></script>
-<script src="js/route.js?v=20261111f"></script>
-<script src="js/app.js?v=20261111f"></script>
+<script src="js/music.js?v=20261117a"></script>
+<script src="js/trivia.js?v=20261117a"></script>
+<script src="js/game.js?v=20261117a"></script>
+<script src="data/embedded.js?v=20261117a"></script>
+<script src="js/route.js?v=20261117a"></script>
+<script src="js/app.js?v=20261117a"></script>
 </body>
 </html>

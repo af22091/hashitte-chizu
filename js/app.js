@@ -85,6 +85,12 @@
   /* 形の大きさ(m)。細長い国は少し大きめにする */
   const sizeOf = (p, key) => Math.min(SIZES[key] * (p.scale || 1), MAX_SIZE_M);
 
+  /* ---------- 音楽 ---------- */
+  $('#btn-music').onclick = () => { Music.unlock(); Music.toggle(); };
+  const unlockOnce = e => { if (e && e.target && e.target.closest && e.target.closest('#btn-music')) return; Music.unlock(); window.removeEventListener('pointerdown', unlockOnce); window.removeEventListener('keydown', unlockOnce); };
+  window.addEventListener('pointerdown', unlockOnce); window.addEventListener('keydown', unlockOnce);
+  Music.refresh();
+
   /* ---------- ホーム(モード選択) ---------- */
   function thumb(mk) {
     const D = DATAS[mk], runs = runsOf(mk), [x0, y0, w, h] = D.data.viewBox;
@@ -247,16 +253,21 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
     if (name === 'map') { ensureMap(); setTimeout(() => map.invalidateSize(), 50); }
     $('#btn-home').hidden = name === 'home';
+    if (name !== 'map') Music.scene('calm');
     $('#counter').hidden = name === 'home';
     if (name === 'home') { $('#top h1').textContent = 'はしって地図あつめ'; document.title = 'はしって地図あつめ'; }
   }
   function ensureMap() {
     if (map) return;
     map = L.map('map', { zoomControl: true });
-    /* file:// で開くとRefererが付かず、OSM公式タイルに拒否される。その場合だけ別の地図タイルを使う */
-    const viaFile = location.protocol === 'file:';
-    L.tileLayer(viaFile ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { maxZoom: 19, subdomains: viaFile ? 'abcd' : 'abc', attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' + (viaFile ? ' © CARTO' : '') }).addTo(map);
+    /* すっきりしたカラー地図(Google マップに近い見た目)と、コースが目立つ淡色地図を切り替えられる */
+    const attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>';
+    const mk = k => L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${k}/{z}/{x}/{y}{r}.png`, { maxZoom: 20, maxNativeZoom: 19, subdomains: 'abcd', attribution: attr });
+    const bases = { 'カラー': mk('voyager'), '淡色': mk('light_all') };
+    let pick = 'カラー'; try { pick = localStorage.getItem('hashitte-basemap') || pick; } catch (e) { /* 既定 */ }
+    (bases[pick] || bases['カラー']).addTo(map);
+    L.control.layers(bases, null, { position: 'topright', collapsed: true }).addTo(map);
+    map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap', e.name); } catch (err) { /* なし */ } });
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
     map.setView(s, 15);
@@ -320,7 +331,7 @@
     'ゆっくり歩いても完成します。ただしコースは順番どおりに。',
     'スタート地点に着くと、自動で記録が始まります。',
   ];
-  let tipTimer = null, tipI = 0;
+  let tipTimer = null, tipI = 0, tips = TIPS;
   function outlineSvg(outline) {
     const pts = outline.map(([x, y]) => [50 + x * 76, 50 - y * 76]);
     const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('') + 'Z';
@@ -331,14 +342,20 @@
   }
   function startLoader() {
     $('#loader-shape').innerHTML = plan.pref ? outlineSvg(plan.pref.outline) : '';
-    tipI = Math.floor(Math.random() * TIPS.length); $('#loader-tip').textContent = TIPS[tipI];
+    tips = (window.TRIVIA_JP && cur === 'jp' && plan.pref && TRIVIA_JP[plan.pref.short] ? ['🗾 ' + TRIVIA_JP[plan.pref.short]] : []).concat(TIPS);
+    tipI = 0; $('#loader-tip').textContent = tips[0];
     clearInterval(tipTimer);
     tipTimer = setInterval(() => {
       const el = $('#loader-tip'); el.classList.add('out');
-      setTimeout(() => { tipI = (tipI + 1) % TIPS.length; el.textContent = TIPS[tipI]; el.classList.remove('out'); }, 250);
+      setTimeout(() => { tipI = (tipI + 1) % tips.length; el.textContent = tips[tipI]; el.classList.remove('out'); }, 250);
     }, 4000);
   }
-  function stopLoader() { clearInterval(tipTimer); tipTimer = null; }
+  function stopLoader() { clearInterval(tipTimer); tipTimer = null; MiniGame.stop(); $('#game').hidden = true; $('#btn-game').textContent = '🏃 待ち時間であそぶ'; }
+  $('#btn-game').onclick = () => {
+    const cv = $('#game');
+    if (cv.hidden) { cv.hidden = false; MiniGame.start(cv); $('#btn-game').textContent = 'ゲームをとじる'; }
+    else { MiniGame.stop(); cv.hidden = true; $('#btn-game').textContent = '🏃 待ち時間であそぶ'; }
+  };
   function progress(f, text) {
     if ($('#plan-prog').hidden) { $('#plan-prog').hidden = false; startLoader(); }
     $('#plan-prog .bar i').style.width = Math.round(f * 100) + '%';
@@ -346,10 +363,36 @@
     if (text) $('#loader-phase').textContent = text;
   }
   $('#btn-make').onclick = makeCourse;
+  /* 道路データのキャッシュ(IndexedDB): 近い場所・同じ大きさなら再取得しない */
+  const RoadCache = {
+    open() {
+      return new Promise((res, rej) => {
+        if (!window.indexedDB) return rej(new Error('no idb'));
+        const q = indexedDB.open('hashitte-roads', 1);
+        q.onupgradeneeded = () => q.result.createObjectStore('r', { keyPath: 't' });
+        q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+      });
+    },
+    async all() { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction('r').objectStore('r').getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+    async get(lat, lon, r) {
+      try {
+        const near = (await this.all()).filter(x => x.r >= r * 0.98 && Math.hypot((x.lat - lat) * 111000, (x.lon - lon) * 91000) < 80 && Date.now() - x.t < 7 * 864e5);
+        return near.length ? near[0].json : null;
+      } catch (e) { return null; }
+    },
+    async put(lat, lon, r, json) {
+      try {
+        const db = await this.open(), all = (await this.all()).sort((a, b) => a.t - b.t);
+        const tx = db.transaction('r', 'readwrite'), st = tx.objectStore('r');
+        all.slice(0, Math.max(0, all.length - 3)).forEach(x => st.delete(x.t));     // 古いものは捨てて、直近4件まで
+        st.put({ t: Date.now(), lat, lon, r, json });
+      } catch (e) { /* 保存できなくても続行 */ }
+    },
+  };
   async function makeCourse() {
     if (plan.busy) return;
     const sizeM = sizeOf(plan.pref, plan.size), [lat0, lon0] = plan.start, src = $('#src').value;
-    plan.busy = true; $('#btn-make').disabled = true; $('#btn-make').textContent = '作成中…'; $('#plan-msg').textContent = '';
+    plan.busy = true; Music.scene('work'); $('#btn-make').disabled = true; $('#btn-make').textContent = '作成中…'; $('#plan-msg').textContent = '';
     $('#plan-results').hidden = true; planLayer.clearLayers();
     try {
       let g;
@@ -358,7 +401,10 @@
         g = RE.syntheticGraph(sizeM * 1.2 + 1500, 1);
       } else {
         progress(0.03, '道路データを取得中…（数秒〜数十秒かかることがあります）');
-        const json = await RE.fetchRoads(lat0, lon0, sizeM * 0.9 + 250, { onStatus: t => progress(0.05, t) });
+        const rad = sizeM * 0.95 + 150;
+        let json = await RoadCache.get(lat0, lon0, rad);              // 同じ場所を続けて試すときは、保存した道路データを使う(待ち時間ゼロ)
+        if (json) progress(0.1, '前回取得した道路データを使います');
+        else { json = await RE.fetchRoads(lat0, lon0, rad, { onStatus: t => progress(0.05, t) }); RoadCache.put(lat0, lon0, rad, json); }
         progress(0.12, '道路網を作成中…'); await tick();
         g = RE.buildGraphFromOverpass(json, lat0, lon0);
       }
@@ -367,11 +413,11 @@
         onProgress: (f, t) => progress(0.15 + 0.85 * f, t),
       });
       plan.routes = routes; plan.sel = 0; plan.lat0 = lat0; plan.lon0 = lon0; plan.demo = src === 'demo';
-      showRoutes();
+      Music.sfx('ok'); showRoutes();
     } catch (e) {
       $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
     } finally {
-      plan.busy = false; $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#plan-prog').hidden = true; stopLoader();
+      plan.busy = false; Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; $('#plan-prog').hidden = true; stopLoader();
     }
   }
   /* 地図を合わせるときの余白(パネルに隠れない位置に収める) */
@@ -390,7 +436,9 @@
     const r = plan.routes[plan.sel];
     planLayer.clearLayers();
     const ideal = L.polygon(toLL(r.ideal, plan.lat0, plan.lon0), { color: '#1e88e5', weight: 2, dashArray: '6 6', fill: false });
-    const line = L.polyline(toLL(r.pts.concat([r.pts[0]]), plan.lat0, plan.lon0), { color: '#e53935', weight: 5, opacity: .9 });
+    const ll = toLL(r.pts.concat([r.pts[0]]), plan.lat0, plan.lon0);
+    planLayer.addLayer(L.polyline(ll, { color: '#fff', weight: 9, opacity: .95, lineJoin: 'round' }));   // 白い縁取りで、地図の上でも線がくっきり見える
+    const line = L.polyline(ll, { color: '#e8384f', weight: 5, opacity: .95, lineJoin: 'round' });
     planLayer.addLayer(ideal); planLayer.addLayer(line);
     map.fitBounds(line.getBounds(), fitPad());
     $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（青い点線が目標の形）・走る距離 約${(r.lengthM / 1000).toFixed(1)}km` + (plan.demo ? '・デモ道路' : '');
@@ -414,7 +462,8 @@
     run.tracker = new RE.CourseTracker(route.pts);
     run.planLL = toLL(route.pts, run.lat0, run.lon0);
     planLayer.clearLayers(); runLayer.clearLayers(); if (startMarker) startMarker.remove();
-    runLayer.addLayer(L.polyline(run.planLL.concat([run.planLL[0]]), { color: '#e53935', weight: 5, opacity: .55 }));
+    runLayer.addLayer(L.polyline(run.planLL.concat([run.planLL[0]]), { color: '#fff', weight: 9, opacity: .8 }));
+    runLayer.addLayer(L.polyline(run.planLL.concat([run.planLL[0]]), { color: '#e8384f', weight: 5, opacity: .6 }));
     run.layerCovered = L.layerGroup().addTo(runLayer);
     run.line = L.polyline([], { color: '#1e88e5', weight: 4, opacity: .9 }).addTo(runLayer);
     L.marker(run.planLL[0], { interactive: false, icon: L.divIcon({ className: '', html: '<div class="start-pin">📍</div>', iconSize: [26, 26], iconAnchor: [13, 24] }) }).addTo(runLayer);
@@ -461,7 +510,7 @@
     if (r.done) completeRun();
   }
   async function startRun() {
-    run.running = true; run.t0 = Date.now() - run.elapsed * 1000;
+    run.running = true; run.t0 = Date.now() - run.elapsed * 1000; Music.scene('run');
     $('#btn-run').textContent = '一時停止'; $('#sim').disabled = true; $('#sim-speed').disabled = true;
     run.clock = setInterval(() => { run.elapsed = (Date.now() - run.t0) / 1000; updateStats(); }, 500);
     run.sim = DEV && $('#sim').checked;
@@ -484,7 +533,7 @@
     }
   }
   function stopTracking() {
-    run.running = false; clearInterval(run.clock); clearInterval(run.simTimer);
+    run.running = false; clearInterval(run.clock); clearInterval(run.simTimer); Music.scene('calm');
     if (run.watchId != null) { navigator.geolocation.clearWatch(run.watchId); run.watchId = null; }
     if (run.wake) { try { run.wake.release(); } catch (e) { /* 何もしない */ } run.wake = null; }
   }
@@ -511,7 +560,7 @@
       trail: keep, planned: run.planLL.map(p => [+p[0].toFixed(6), +p[1].toFixed(6)]),
       place: null,
     };
-    persist(); leaveMap(); flashPiece(id); showDone(id, true);
+    persist(); Music.sfx('done'); leaveMap(); flashPiece(id); showDone(id, true);
     fetchPlaceFor(mk, id);            // 走った場所の地名を、あとから自動で記録する
   }
 
