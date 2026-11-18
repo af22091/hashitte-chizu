@@ -403,3 +403,15 @@ html[data-tod="night"] #board .piece { filter: drop-shadow(1.5px 2px 0 rgba(0,0,
   #counter { padding: 4px 10px; } #counter b { font-size: 17px; }
 }
 @media (max-width: 420px) { #btn-music { display: none; } }
+
+/* 黒一色の線アイコン(絵文字は使わない) */
+.ico { width: 22px; height: 22px; flex: none; color: var(--ink); }
+#btn-settings .ico { width: 21px; height: 21px; }
+.home-quick button { display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* アプリ内ブラウザでも、ボタンの文字が途中で折り返されないように */
+button, .seg button, .set-btns button { word-break: keep-all; overflow-wrap: normal; line-break: strict; }
+.set-btns button, .home-quick button, .sheet-actions button { white-space: nowrap; }
+.set-btns { flex-wrap: nowrap; } .set-btns button { padding: 12px 6px; font-size: 14px; }
+.set-btns #set-reset { flex: 1; }
+.set-body, .set-about, .set-l small, .facts, #game-help, #loader-tip, .nav-top b { word-break: normal; overflow-wrap: anywhere; line-break: strict; }
+.set-about { word-break: keep-all; overflow-wrap: break-word; }

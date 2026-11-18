@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=20261118g">
+<link rel="stylesheet" href="css/style.css?v=20261118h">
 </head>
 <body>
 <header id="top">
@@ -17,9 +17,8 @@
   <h1>はしって地図あつめ</h1>
   <button id="btn-music" class="icon" aria-label="音楽のオン・オフ" title="音楽">♪</button>
   <div id="counter" title="完成した数" hidden><b id="count-done">0</b> / <span id="count-total">47</span></div>
-  <button id="btn-settings" class="icon" aria-label="設定" title="設定">⚙</button>
-  <button id="btn-menu" class="icon" aria-label="メニュー">⋯</button>
-  <div id="menu" hidden>
+  <button id="btn-settings" class="icon" aria-label="設定" title="設定"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-dasharray="3.37 3.37"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg></button>
+  <div id="menu" hidden style="display:none">
     <button id="menu-settings">⚙ 設定</button>
     <button id="menu-list">記録一覧（走った場所）</button>
     <button id="menu-export" hidden>記録を書き出す</button>
@@ -35,7 +34,7 @@
     <h2 class="home-lead">どの地図を走る？</h2>
     <p class="home-sub">走った道が線になって、地図のピースが埋まっていきます。</p>
     <div id="home-cards"><p class="muted" style="padding:16px">読み込み中…（このまま変わらないときは Ctrl+F5 で再読み込みしてください）</p></div>
-    <div class="home-quick"><button id="home-settings" type="button">⚙ 設定</button><button id="home-list" type="button">📖 記録一覧</button></div>
+    <div class="home-quick"><button id="home-settings" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-dasharray="3.37 3.37"/><circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg><span>設定</span></button><button id="home-list" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><rect x="3" y="4.5" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="3" y="15.5" width="4" height="4" rx="1"/></g><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10.5 6.5H21"/><path d="M10.5 12H21"/><path d="M10.5 17.5H17"/></g></svg><span>記録一覧</span></button></div>
   </section>
 
   <!-- ① パズル盤 -->
@@ -177,12 +176,12 @@ window.addEventListener('error', function (e) {
 <script src="lib/leaflet/leaflet.js"></script>
 <script src="lib/maplibre/maplibre-gl.js"></script>
 <script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="js/theme.js?v=20261118g"></script>
-<script src="js/music.js?v=20261118g"></script>
-<script src="js/trivia.js?v=20261118g"></script>
-<script src="js/game.js?v=20261118g"></script>
-<script src="data/embedded.js?v=20261118g"></script>
-<script src="js/route.js?v=20261118g"></script>
-<script src="js/app.js?v=20261118g"></script>
+<script src="js/theme.js?v=20261118h"></script>
+<script src="js/music.js?v=20261118h"></script>
+<script src="js/trivia.js?v=20261118h"></script>
+<script src="js/game.js?v=20261118h"></script>
+<script src="data/embedded.js?v=20261118h"></script>
+<script src="js/route.js?v=20261118h"></script>
+<script src="js/app.js?v=20261118h"></script>
 </body>
 </html>

@@ -1043,8 +1043,6 @@
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') $('#modal').hidden = true; });
 
   /* ---------- メニュー(書き出し・読み込み・初期化) ---------- */
-  $('#btn-menu').onclick = e => { e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
-  document.addEventListener('click', () => { $('#menu').hidden = true; });
   $('#menu-export').onclick = () => {
     const blob = new Blob([JSON.stringify(save)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -1082,7 +1080,7 @@
       `<h3>走るとき</h3>` + tg('autoLocate', '開いたら現在地にピンを立てる', '位置情報の許可が必要です') + tg('autoNav', 'スタートで自分視点のナビ表示にする') +
       tg('voice', '音声案内', '曲がり角の手前で読み上げます') + tg('vibrate', 'バイブレーション', 'ゴールとコースから外れたときに振動') + tg('keepAwake', '走っている間、画面を消さない') +
       `<h3>記録のデータ</h3><div class="set-row"><div class="set-l"><b>走った記録</b><small>${nm}件</small></div></div>` +
-      `<div class="set-btns"><button id="set-list">記録一覧</button><button id="set-export">書き出す</button><button id="set-import">読み込む</button></div>` +
+      `<div class="set-btns"><button id="set-list"><span>記録一覧</span></button><button id="set-export"><span>書き出す</span></button><button id="set-import"><span>読み込む</span></button></div>` +
       `<div class="set-btns"><button id="set-reset" class="danger">すべて消す</button></div>` +
       `<h3>このアプリについて</h3><div class="set-about">はしって地図あつめ　バージョン ${APP_VER}<br>走った道をつないで、地図のピースを集めるアプリです。<br><br>` +
       `位置情報は、コース作りと走行の記録のためだけに使い、この端末の外へは保存しません（地図と道路データの取得のために、場所の周辺の範囲を地図サービスへ送ります）。記録はこの端末のブラウザの中だけに保存されます。<br><br>` +
