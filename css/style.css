@@ -456,3 +456,12 @@ button, .seg button, .set-btns button { word-break: keep-all; overflow-wrap: nor
 /* 動きを減らす設定・アプリ内オフ */
 html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+/* 場所の検索 */
+.search-row { display: block; }
+#place-form { display: flex; gap: 8px; }
+#place-q { flex: 1; min-width: 0; padding: 11px 12px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; font-size: 16px; }
+#place-go { white-space: nowrap; }
+.place-res { margin-top: 8px; max-height: 32vh; overflow-y: auto; border: 2px solid var(--ink); border-radius: 12px; background: #fff; }
+.place-res > button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #eef2f5; border-radius: 0; box-shadow: none; padding: 10px 12px; }
+.place-res > button small { display: block; font-weight: 500; color: var(--ink2); margin-top: 2px; }
+.place-res > .muted { padding: 10px 12px; }

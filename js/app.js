@@ -441,6 +441,25 @@
     updateEst();
   });
   /* 地図画面を開いたら、まず現在地にピンを立てる(許可されていない・取得できないときは、前回の場所のまま) */
+  /* 場所の検索(OpenStreetMap Nominatim)→ 結果をタップでスタート地点に */
+  $('#place-form').addEventListener('submit', async e => {
+    e.preventDefault(); const q = $('#place-q').value.trim(), box = $('#place-res'); if (!q) return;
+    box.hidden = false; box.innerHTML = '<div class="muted">検索中…</div>'; $('#place-go').disabled = true;
+    try {
+      const c = map ? map.getCenter() : null;
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=ja&q=' + encodeURIComponent(q) + (c ? `&viewbox=${c.lng - 1},${c.lat + 1},${c.lng + 1},${c.lat - 1}` : '');
+      const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      box.innerHTML = j.length ? j.map((x, i) => `<button type="button" data-i="${i}"><b>${esc((x.display_name || '').split(',')[0])}</b><small>${esc((x.display_name || '').split(',').slice(1, 4).join(' '))}</small></button>`).join('') : '<div class="muted">見つかりませんでした。別の言葉でお試しください。</div>';
+      box.onclick = async ev => {
+        const b = ev.target.closest('button[data-i]'); if (!b) return; const x = j[+b.dataset.i], ll = [+x.lat, +x.lon];
+        if (plan.routes.length && !await guardCourse()) return;
+        if (plan.busy) return; plan.touched = true;
+        setStart(ll, true); map.setView(ll, 15); box.hidden = true; toast('スタートを設定しました');
+      };
+    } catch (er) { box.innerHTML = '<div class="muted">検索できませんでした。通信を確認してもう一度お試しください。</div>'; }
+    finally { $('#place-go').disabled = false; }
+  });
   function locateStart() {
     if (!navigator.geolocation || !settings.autoLocate) return;
     const cur0 = plan.pref && plan.pref.id;
