@@ -346,3 +346,21 @@ button.icon { box-shadow: 2px 2px 0 var(--ink); }
 
 #board-wrap { padding: 0 2px; }
 #board-hint { padding: 2px 16px 8px; }
+
+
+/* ================= 時間帯テーマ(朝・昼・夕方・夜) — js/theme.js が <html data-tod> を切り替える =================
+   昼=既定(黄)。背景の色と、背景に直接のる文字の色だけを変え、白いパネルと黒い太線はそのまま */
+:root { --on-bg: var(--ink); --glow: #ffe680; --sh: var(--ink); }
+html[data-tod="morning"] { --sea: #ffc9a0; --glow: #fff0d6; }
+html[data-tod="evening"] { --sea: #ff8f5a; --glow: #ffc58f; }
+html[data-tod="night"]   { --sea: #30244f; --glow: #4a3a7a; --on-bg: #fff3c4; --sh: #130d24; }
+body { transition: background-color .6s; }
+#screen-board.active { background: radial-gradient(circle at 50% 45%, var(--glow) 0%, var(--sea) 78%); }
+#screen-home.active { background: radial-gradient(circle at 30% 0%, var(--glow) 0%, var(--sea) 70%); }
+.home-lead, .home-sub, #board-hint { color: var(--on-bg); }
+.mode-card { box-shadow: 6px 6px 0 var(--sh); }
+.mode-card:hover { box-shadow: 8px 8px 0 var(--sh); }
+.mode-card:active { box-shadow: 2px 2px 0 var(--sh); }
+#loading { background: color-mix(in srgb, var(--sea) 88%, transparent); }
+html[data-tod="night"] #board .lab { fill: var(--ink); }
+html[data-tod="night"] #board .piece { filter: drop-shadow(1.5px 2px 0 rgba(0,0,0,.55)); }

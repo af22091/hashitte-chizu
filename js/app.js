@@ -291,7 +291,7 @@
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
     map.setView(s, 15);
-    map.on('click', async e => { if (mode !== 'plan' || plan.busy) return; if (!await guardCourse()) return; setStart([e.latlng.lat, e.latlng.lng]); });
+    map.on('click', async e => { if (mode !== 'plan' || plan.busy) return; if (!await guardCourse()) return; plan.touched = true; setStart([e.latlng.lat, e.latlng.lng]); });
   }
 
   /* ---------- 確認ダイアログ(まちがい防止) ---------- */
@@ -343,6 +343,7 @@
     $('#plan-results').hidden = true; $('#plan-msg').textContent = ''; $('#loading').hidden = true;
     $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true;
     setStart(save.lastStart || DEFAULT_START, true);
+    plan.touched = false; locateStart();
     updateEst(); refreshDraft();
   }
   /* 作ったコースの控え: 消してしまっても12時間は呼び戻せる */
@@ -374,6 +375,7 @@
       startMarker.on('dragend', async () => {
         const p = startMarker.getLatLng();
         if (plan.routes.length && !await guardCourse()) { startMarker.setLatLng(plan.start); return; }
+        plan.touched = true;
         setStart([p.lat, p.lng]);
       });
     } else startMarker.setLatLng(ll);
@@ -391,11 +393,22 @@
     document.querySelectorAll('#size-seg button').forEach(x => x.classList.toggle('on', x === b));
     updateEst();
   });
+  /* 地図画面を開いたら、まず現在地にピンを立てる(許可されていない・取得できないときは、前回の場所のまま) */
+  function locateStart() {
+    if (!navigator.geolocation) return;
+    const cur0 = plan.pref && plan.pref.id;
+    navigator.geolocation.getCurrentPosition(p => {
+      const ll = [p.coords.latitude, p.coords.longitude];
+      if (window.Theme) Theme.setLocation(ll[0], ll[1]);
+      if (mode !== 'plan' || !plan.pref || plan.pref.id !== cur0 || plan.touched || plan.routes.length || plan.busy) return;   // もう自分で選んだ後は動かさない
+      setStart(ll, true);
+    }, () => { /* 許可なし・失敗: そのまま */ }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
   $('#btn-here').onclick = async () => {
     if (!await guardCourse()) return;
     if (!navigator.geolocation) return toast('この端末では現在地を取得できません');
     navigator.geolocation.getCurrentPosition(
-      p => setStart([p.coords.latitude, p.coords.longitude], true),
+      p => { plan.touched = true; if (window.Theme) Theme.setLocation(p.coords.latitude, p.coords.longitude); setStart([p.coords.latitude, p.coords.longitude], true); },
       err => toast('現在地を取得できませんでした: ' + err.message), { enableHighAccuracy: true, timeout: 12000 });
   };
   $('#plan-back').onclick = async () => {
