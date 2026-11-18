@@ -415,3 +415,44 @@ button, .seg button, .set-btns button { word-break: keep-all; overflow-wrap: nor
 .set-btns #set-reset { flex: 1; }
 .set-body, .set-about, .set-l small, .facts, #game-help, #loader-tip, .nav-top b { word-break: normal; overflow-wrap: anywhere; line-break: strict; }
 .set-about { word-break: keep-all; overflow-wrap: break-word; }
+
+/* ===== 動き(UIアニメーション) ===== */
+.ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .22; transform: scale(0); pointer-events: none; animation: rip .6s ease-out forwards; }
+@keyframes rip { to { transform: scale(1); opacity: 0; } }
+/* ① 作成中ボタンのスピナー */
+#btn-make:disabled::before { content: ''; display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border: 3px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* トースト: ばねで出て、すっと消える */
+#toast.in { animation: toastIn .45s cubic-bezier(.34,1.56,.64,1) both; }
+#toast.out { animation: toastOut .26s ease-in both; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 24px) scale(.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes toastOut { to { opacity: 0; transform: translate(-50%, 14px) scale(.96); } }
+/* ボトムシート: ばねで上がる */
+#sheet:not([hidden]) { animation: sheetUp .45s cubic-bezier(.34,1.4,.64,1) both; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.grab { position: relative; touch-action: none; }
+.grab::after { content: ''; position: absolute; left: -30px; right: -30px; top: -10px; bottom: -12px; }
+/* シェイク */
+.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px); } 40%, 60% { transform: translateX(7px); } }
+/* スケルトン */
+.skel-card { height: 150px; border-radius: 20px; margin-bottom: 14px; border: 3px solid var(--ink); background: linear-gradient(100deg, rgba(255,255,255,.55) 30%, rgba(255,255,255,.95) 50%, rgba(255,255,255,.55) 70%) #fff; background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+@keyframes skel { to { background-position: -200% 0; } }
+/* 順番に出る */
+.stag, .rec-wrap { animation: stag .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes stag { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.screen.enter:not(#screen-map) { animation: scrIn .35s ease-out both; }
+@keyframes scrIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* 選んだピースがぽんと弾む */
+.piece.sel { animation: pop .45s cubic-bezier(.34,1.56,.64,1); transform-box: fill-box; transform-origin: center; }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+/* 紙吹雪 */
+#confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 1500; pointer-events: none; }
+/* 記録一覧: 横にずらすと削除 */
+.rec-wrap { position: relative; overflow: hidden; border-radius: 14px; margin-bottom: 8px; touch-action: pan-y; }
+.rec-wrap .rec { position: relative; z-index: 1; width: 100%; margin: 0; background: #fff; }
+.rec-del { position: absolute; right: 0; top: 0; bottom: 0; width: 88px; border: 0; border-radius: 0; background: var(--danger, #e8384f); color: #fff; box-shadow: none; }
+.rec-del:active { transform: none; }
+/* 動きを減らす設定・アプリ内オフ */
+html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }

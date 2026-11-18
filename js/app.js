@@ -7,10 +7,11 @@
   const STORE_KEY = 'hashitte-nihon-v1';
   /* ---------- ユーザー設定(この端末の中だけに保存) ---------- */
   const SET_KEY = 'hashitte-settings-v1', APP_VER = '2026.11.18';
-  const SET_DEF = { nick: '', units: 'km', autoLocate: true, autoNav: true, keepAwake: true, vibrate: true, voice: false };
+  const SET_DEF = { nick: '', units: 'km', autoLocate: true, autoNav: true, keepAwake: true, vibrate: true, voice: false, motion: true };
   let settings = Object.assign({}, SET_DEF);
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) { /* 既定 */ }
   const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) { /* なし */ } };
+  FX.setEnabled(settings.motion !== false);
   const U = () => (settings.units === 'mi' ? { f: 0.621371, n: 'mi' } : { f: 1, n: 'km' });
   const kmTxt = (km, d = 1) => (km * U().f).toFixed(d) + U().n;
   const buzz = p => { if (settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* なし */ } };
@@ -47,8 +48,8 @@
   /* ---------- 共通 ---------- */
   let toastTimer;
   function toast(t) {
-    const el = $('#toast'); el.textContent = t; el.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
+    const el = $('#toast'); el.textContent = t; el.hidden = false; el.classList.remove('out'); void el.offsetWidth; el.classList.add('in');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.classList.remove('in', 'out'); }, 260); }, 3200);
   }
   function haversine(a, b) {
     const R = 6371000, r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
@@ -111,7 +112,7 @@
     $('.home-lead').textContent = settings.nick ? `${settings.nick}さん、どの地図を走る？` : 'どの地図を走る？';
     $('#home-cards').innerHTML = Object.values(MODES).map(m => {
       const D = DATAS[m.key], n = Object.keys(runsOf(m.key)).filter(id => D.byId[id]).length, tot = D.prefs.length;
-      return `<button class="mode-card" data-mode="${m.key}"><div class="mode-thumb">${thumb(m.key)}</div>` +
+      return `<button class="mode-card stag" style="--i:${m.key === 'world' ? 1 : 0}" data-mode="${m.key}"><div class="mode-thumb">${thumb(m.key)}</div>` +
         `<div class="mode-info"><h2>${m.home}</h2><div class="mode-count"><b>${n}</b> / ${tot}</div>` +
         `<div class="bar"><i style="width:${Math.round(n / tot * 100)}%"></i></div></div></button>`;
     }).join('');
@@ -302,6 +303,7 @@
     const v = $('#sh-view'); if (v) v.onclick = () => showDone(id, false);
     const pb = $('#sh-place .mini'); if (pb) pb.onclick = () => fetchPlaceFor(cur, id);
   }
+  FX.sheetSwipe($('#sheet'), closeSheet);
   function renderBoardSel() {
     document.querySelectorAll('#board .piece').forEach(el => el.classList.toggle('sel', +el.dataset.id === selectedId));
   }
@@ -313,6 +315,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
     if (name === 'map') { ensureMap(); setTimeout(() => map.invalidateSize(), 50); }
     $('#btn-home').hidden = name === 'home';
+    { const sc = $('#screen-' + name); if (sc) { if (name === 'map') FX.reveal(sc); else sc.classList.remove('enter'), void sc.offsetWidth, sc.classList.add('enter'); } }
     if (name !== 'map') Music.scene('calm');
     $('#counter').hidden = name === 'home';
     if (name === 'home') { $('#top h1').textContent = 'はしって地図あつめ'; document.title = 'はしって地図あつめ'; }
@@ -585,7 +588,7 @@
       }
     } catch (e) {
       if (tok !== plan.token) return;
-      $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
+      FX.shake($('#plan-msg')); $('#plan-msg').textContent = e.message + (src === 'osm' ? '。大きさを「小」にするか、道路の少ない場所で試すか、少し待ってからもう一度お試しください。「デモ」ならネットなしで動きます。' : '');
     } finally {
       if (tok === plan.token) { plan.busy = false; if (plan.holdLoader) { plan.holdLoader = false; } else { $('#loading').hidden = true; stopLoader(); } Music.scene('calm'); $('#btn-make').disabled = false; $('#btn-make').textContent = 'コースを作る'; }
     }
@@ -727,7 +730,7 @@
     layerCovered: null, line: null, me: null, wake: null, sim: false, lastN: -1 };
 
   function setStatus(text, kind) {
-    const el = $('#run-status'); el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : '');
+    const el = $('#run-status'); el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : ''); if (kind === 'warn' || kind === 'bad') FX.shake(el);
     const ns = $('#nav-status'); if (ns) { ns.textContent = text; ns.className = 'status' + (kind ? ' ' + kind : ''); }
   }
 
@@ -1016,11 +1019,12 @@
       `${r.demo ? '<span class="muted">（デモの記録）</span>' : ''}</div>` +
       `<div class="sheet-actions" style="margin-top:12px"><button id="md-del">この記録を消す</button><button class="primary" id="md-ok">とじる</button></div>`;
     $('#modal').hidden = false;
+    if (fresh) { FX.confetti([COLORS[p.color]]); buzz([30, 40, 60]); }
     const pb = $('#md-place .mini'); if (pb) pb.onclick = () => fetchPlaceFor(mk, id);
     $('#md-ok').onclick = () => { $('#modal').hidden = true; };
-    $('#md-del').onclick = () => {
-      if (!confirm(`${p.name} の記録を消しますか？`)) return;
-      delete runsOf(mk)[id]; persist(); if (cur === mk) renderBoard(); else if (!cur) renderHome(); $('#modal').hidden = true; closeSheet();
+    $('#md-del').onclick = async () => {
+      if (!await askConfirm('記録を消しますか？', `${p.name} の記録を消します。元に戻せません。`, '消す', 'やめる')) { showDone(id, fresh, mk); return; }
+      delete runsOf(mk)[id]; persist(); if (cur === mk) renderBoard(); else if (!cur) renderHome(); $('#modal').hidden = true; closeSheet(); toast('記録を消しました');
     };
   }
   /* 記録一覧(国・地域をまたいで、走った場所つきで一覧) */
@@ -1030,15 +1034,23 @@
     items.sort((a, b) => b.r.date.localeCompare(a.r.date));
     $('#modal-card').innerHTML = `<h2>記録一覧</h2><div class="muted">${items.length}件</div>` +
       (items.length ? `<div class="rec-list">` + items.map(({ mk, id, r, p }) =>
-        `<button class="rec" data-key="${mk}:${id}"><span class="rec-trail">${trailSvg(r.trail, COLORS[p.color], null, 56)}</span>` +
+        `<div class="rec-wrap" data-key="${mk}:${id}" style="--i:${items.findIndex(x => x.id === id && x.mk === mk)}"><button class="rec-del" aria-label="削除">削除</button><button class="rec" data-key="${mk}:${id}"><span class="rec-trail">${trailSvg(r.trail, COLORS[p.color], null, 56)}</span>` +
         `<span class="rec-main"><b>${p.name}</b><small>${MODES[mk].home} ・ ${fmtDate(r.date)} ・ ${fmtKm(r.distanceM)}</small>` +
-        `<small class="rec-place">${r.place && r.place.text ? '📍 ' + esc(r.place.text) : '📍 未取得'}</small></span></button>`).join('') + '</div>'
+        `<small class="rec-place">${r.place && r.place.text ? '📍 ' + esc(r.place.text) : '📍 未取得'}</small></span></button></div>`).join('') + '</div>'
         : '<p class="muted">まだ記録がありません。</p>') +
       `<div class="sheet-actions" style="margin-top:12px"><button class="primary" id="md-ok">とじる</button></div>`;
     $('#modal').hidden = false; $('#md-ok').onclick = () => { $('#modal').hidden = true; };
-    $('#modal-card .rec-list') && $('#modal-card .rec-list').addEventListener('click', e => {
-      const b = e.target.closest('.rec'); if (!b) return; const [mk, id] = b.dataset.key.split(':'); showDone(id, false, mk);
-    });
+    const rl = $('#modal-card .rec-list');
+    if (rl) {
+      FX.swipeRows(rl, async key => {
+        const [mk, id] = key.split(':'), p = prefOf(mk, id);
+        if (!await askConfirm('記録を消しますか？', `${p.name} の記録を消します。元に戻せません。`, '消す', 'やめる')) { showList(); return; }
+        delete runsOf(mk)[id]; persist(); if (cur === mk) renderBoard(); else if (!cur) renderHome(); showList(); toast('記録を消しました');
+      });
+      rl.addEventListener('click', e => {
+        const b = e.target.closest('.rec'); if (!b) return; const [mk, id] = b.dataset.key.split(':'); showDone(id, false, mk);
+      });
+    }
   }
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') $('#modal').hidden = true; });
 
@@ -1079,6 +1091,7 @@
       `<div class="set-row"><div class="set-l"><b>効果音</b><small>コース完成・ゴールの音</small></div><button class="switch" data-snd="sfx" role="switch" aria-checked="${Music.sfxIsOn()}"><i></i></button></div>` +
       `<h3>走るとき</h3>` + tg('autoLocate', '開いたら現在地にピンを立てる', '位置情報の許可が必要です') + tg('autoNav', 'スタートで自分視点のナビ表示にする') +
       tg('voice', '音声案内', '曲がり角の手前で読み上げます') + tg('vibrate', 'バイブレーション', 'ゴールとコースから外れたときに振動') + tg('keepAwake', '走っている間、画面を消さない') +
+      `<h3>見た目</h3>` + tg('motion', 'アニメーション', '波紋・紙吹雪・切り替えの動き') +
       `<h3>記録のデータ</h3><div class="set-row"><div class="set-l"><b>走った記録</b><small>${nm}件</small></div></div>` +
       `<div class="set-btns"><button id="set-list"><span>記録一覧</span></button><button id="set-export"><span>書き出す</span></button><button id="set-import"><span>読み込む</span></button></div>` +
       `<div class="set-btns"><button id="set-reset" class="danger">すべて消す</button></div>` +
@@ -1093,7 +1106,7 @@
     if (sw) {
       const on = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', String(on));
       if (sw.dataset.snd === 'bgm') Music.setOn(on); else if (sw.dataset.snd === 'sfx') { Music.setSfx(on); if (on) Music.sfx('ok'); }
-      else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance('音声案内をオンにしました'); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
+      else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'motion') FX.setEnabled(on); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance('音声案内をオンにしました'); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
       return;
     }
     const sb = e.target.closest('.seg button');
@@ -1102,7 +1115,7 @@
       if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (cur && key === 'units') { refreshAfterUnits(); } }
       return;
     }
-    const id = e.target.id;
+    const id = (e.target.closest('button') || e.target).id;
     if (id === 'set-close') $('#modal').hidden = true;
     else if (id === 'set-list') showList();
     else if (id === 'set-export') $('#menu-export').click();
