@@ -24,8 +24,9 @@
     void base;
     return { rise: toLocalMin(riseUTC), set: toLocalMin(setUTC) };
   }
+  let mode = 'auto'; try { mode = localStorage.getItem('hashitte-theme-mode') || 'auto'; } catch (e) { /* 自動 */ }
   function phase(now) {
-    const q = new URLSearchParams(location.search).get('tod');
+    const q = new URLSearchParams(location.search).get('tod') || (mode !== 'auto' ? mode : null);
     if (['morning', 'day', 'evening', 'night'].includes(q)) return q;
     const s = sun(now, loc[0], loc[1]);
     if (!s.rise && s.polar) return s.polar;
@@ -43,7 +44,7 @@
     return p;
   }
   root.Theme = {
-    apply, phase: () => document.documentElement.dataset.tod,
+    apply, mode: () => mode, setMode(v) { mode = v; try { localStorage.setItem('hashitte-theme-mode', v); } catch (e) { /* なし */ } apply(); }, phase: () => document.documentElement.dataset.tod,
     setLocation(lat, lon) { if (!isFinite(lat) || !isFinite(lon)) return; loc = [lat, lon]; try { localStorage.setItem(KEY, JSON.stringify(loc)); } catch (e) { /* なし */ } apply(); },
   };
   apply();

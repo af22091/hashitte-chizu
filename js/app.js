@@ -5,6 +5,15 @@
   const COLORS = ['#ff6b81', '#ffb703', '#22c493', '#a27bff', '#ff9ad5'];
   const SIZES = { s: 1000, m: 1500, l: 2000 };            // 形の最長辺(m)
   const STORE_KEY = 'hashitte-nihon-v1';
+  /* ---------- ユーザー設定(この端末の中だけに保存) ---------- */
+  const SET_KEY = 'hashitte-settings-v1', APP_VER = '2026.11.18';
+  const SET_DEF = { nick: '', units: 'km', autoLocate: true, autoNav: true, keepAwake: true, vibrate: true, voice: false };
+  let settings = Object.assign({}, SET_DEF);
+  try { Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) { /* 既定 */ }
+  const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) { /* なし */ } };
+  const U = () => (settings.units === 'mi' ? { f: 0.621371, n: 'mi' } : { f: 1, n: 'km' });
+  const kmTxt = (km, d = 1) => (km * U().f).toFixed(d) + U().n;
+  const buzz = p => { if (settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* なし */ } };
   const DEFAULT_START = [35.6762, 139.6503];              // 場所が未設定のときの地図の中心(東京)
   const DEV = new URLSearchParams(location.search).has('dev');   // ?dev=1 のときだけ、デモ道路とシミュレーション走行が使える
   const $ = s => document.querySelector(s);
@@ -46,7 +55,7 @@
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
   }
-  const fmtKm = m => (m / 1000).toFixed(2) + ' km';
+  const fmtKm = m => kmTxt(m / 1000, 2);
   const fmtTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(ss).padStart(2, '0'); };
   const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
   const fmtDate = iso => { const d = new Date(iso); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
@@ -99,6 +108,7 @@
     return html + '</svg>';
   }
   function renderHome() {
+    $('.home-lead').textContent = settings.nick ? `${settings.nick}さん、どの地図を走る？` : 'どの地図を走る？';
     $('#home-cards').innerHTML = Object.values(MODES).map(m => {
       const D = DATAS[m.key], n = Object.keys(runsOf(m.key)).filter(id => D.byId[id]).length, tot = D.prefs.length;
       return `<button class="mode-card" data-mode="${m.key}"><div class="mode-thumb">${thumb(m.key)}</div>` +
@@ -284,7 +294,7 @@
         `<div class="facts" id="sh-facts">完成 ${fmtDate(run.date)}<br>距離 ${fmtKm(run.distanceM)}<br>時間 ${fmtTime(run.durationS)}<span id="sh-place">${placeHtml(run, cur + id)}</span>${run.demo ? '<br><span class="muted">（デモの記録）</span>' : ''}</div></div>` +
         `<div class="sheet-actions"><button id="sh-view">記録を見る</button><button class="primary" id="sh-run">もう一度走る</button></div>`;
     } else {
-      body += `<div class="facts" style="margin:10px 0">目安の距離: 小 約${estKm(p, 's').toFixed(1)}km ／ 中 約${estKm(p, 'm').toFixed(1)}km ／ 大 約${estKm(p, 'l').toFixed(1)}km</div>` +
+      body += `<div class="facts" style="margin:10px 0">目安の距離: 小 約${kmTxt(estKm(p, 's'))} ／ 中 約${kmTxt(estKm(p, 'm'))} ／ 大 約${kmTxt(estKm(p, 'l'))}</div>` +
         `<div class="sheet-actions"><button class="primary" id="sh-run">この${u}を走る</button></div>`;
     }
     $('#sheet-body').innerHTML = body; $('#sheet').hidden = false;
@@ -418,7 +428,7 @@
   }
   function updateEst() {
     const p = plan.pref; if (!p) return;
-    $('#plan-est').textContent = `${(sizeOf(p, plan.size) / 1000).toFixed(1)}km四方・走る距離の目安 約${estKm(p, plan.size).toFixed(1)}km`;
+    $('#plan-est').textContent = `${kmTxt(sizeOf(p, plan.size) / 1000)}四方・走る距離の目安 約${kmTxt(estKm(p, plan.size))}`;
   }
   $('#size-seg').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b || b.dataset.s === plan.size) return;
@@ -429,7 +439,7 @@
   });
   /* 地図画面を開いたら、まず現在地にピンを立てる(許可されていない・取得できないときは、前回の場所のまま) */
   function locateStart() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !settings.autoLocate) return;
     const cur0 = plan.pref && plan.pref.id;
     navigator.geolocation.getCurrentPosition(p => {
       const ll = [p.coords.latitude, p.coords.longitude];
@@ -590,7 +600,7 @@
     const chips = $('#chips'); chips.innerHTML = '';
     plan.routes.forEach((r, i) => {
       const b = document.createElement('button'); b.className = i === plan.sel ? 'on' : '';
-      b.innerHTML = `案${i + 1}<br>${Math.round(r.iou * 100)}% ・ ${(r.lengthM / 1000).toFixed(1)}km`;
+      b.innerHTML = `案${i + 1}<br>${Math.round(r.iou * 100)}% ・ ${kmTxt(r.lengthM / 1000)}`;
       b.onclick = () => { plan.sel = i; showRoutes(); }; chips.appendChild(b);
     });
     const r = plan.routes[plan.sel];
@@ -601,7 +611,7 @@
     const line = L.polyline(ll, { color: '#e8384f', weight: 5, opacity: .95, lineJoin: 'round' });
     planLayer.addLayer(ideal); planLayer.addLayer(line);
     map.fitBounds(line.getBounds(), fitPad()); startRunner(ll);
-    $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（紫の点線が目標の形）・走る距離 約${(r.lengthM / 1000).toFixed(1)}km` + (plan.demo ? '・デモ道路' : '');
+    $('#plan-info').textContent = `再現度 ${Math.round(r.iou * 100)}%（紫の点線が目標の形）・走る距離 約${kmTxt(r.lengthM / 1000)}` + (plan.demo ? '・デモ道路' : '');
     $('#plan-results').hidden = false;
     $('#panel-plan').classList.add('compact'); $('#btn-opts').hidden = false;   // 設定欄をたたんで地図を広く
   }
@@ -759,6 +769,11 @@
     else if (t) { arrow = t.d > 0 ? '↱' : '↰'; if (Math.abs(t.d) > 135) arrow = '↩'; text = `${t.dist < 15 ? 'まもなく' : Math.round(t.dist / 10) * 10 + 'm先'} ${turnText(t)}`; }
     else text = 'まっすぐ進む';
     $('#nav-arrow').textContent = arrow; $('#nav-text').textContent = text;
+    if (settings.voice && 'speechSynthesis' in window) {          // 音声案内: 曲がり角の60m手前と、ゴール間近で読み上げる
+      const key = t ? (t.dist <= 60 ? text : null) : (text === 'もうすぐゴールです' ? text : null);
+      if (key && key !== NV.spoken) { NV.spoken = key; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(key.replace('m先', 'メートル先')); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (e) { /* なし */ } }
+      if (!key) NV.spoken = null;
+    }
     $('#nav-left').textContent = fmtKm(run.route.lengthM * (1 - run.tracker.progress));
     $('#nav-cov').textContent = Math.round(run.tracker.progress * 100) + '%';
   }
@@ -868,8 +883,8 @@
     run.trail.push([lat, lon]); run.line.addLatLng([lat, lon]);
     if (run.tracker.nCov !== run.lastN) { run.lastN = run.tracker.nCov; drawCovered(); }
     if (r.state === 'wrongWay') setStatus('進む向きが違うか、道をショートカットしています。赤い線の順番どおりに進んでください。', 'warn');
-    else if (r.state === 'off') setStatus(`コースから約${Math.round(r.off)}m離れています。赤い線に戻ってください。`, 'warn');
-    else setStatus(`いい調子です！ あと約${Math.max(0, (run.route.lengthM * (1 - run.tracker.progress) / 1000)).toFixed(1)}km`, 'ok');
+    else if (r.state === 'off') { if (!run.offBuzz) buzz(150); run.offBuzz = true; setStatus(`コースから約${Math.round(r.off)}m離れています。赤い線に戻ってください。`, 'warn'); }
+    else { run.offBuzz = false; setStatus(`いい調子です！ あと約${kmTxt(Math.max(0, run.route.lengthM * (1 - run.tracker.progress) / 1000))}`, 'ok'); }
     updateStats(); navUpdate(lat, lon, acc);
     if (r.done) completeRun();
   }
@@ -893,7 +908,7 @@
         p => onFix(p.coords.latitude, p.coords.longitude, p.coords.accuracy, p.timestamp, false),
         err => { $('#run-msg').textContent = err.code === 1 ? '位置情報が許可されていません。ブラウザの設定で許可してください。' : '位置情報エラー: ' + err.message; },
         { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
-      try { if (navigator.wakeLock) run.wake = await navigator.wakeLock.request('screen'); } catch (e) { /* 画面を点けたままにできなくても続行 */ }
+      try { if (settings.keepAwake && navigator.wakeLock) run.wake = await navigator.wakeLock.request('screen'); } catch (e) { /* 画面を点けたままにできなくても続行 */ }
     }
   }
   function stopTracking() {
@@ -904,7 +919,7 @@
   function pauseRun() {
     stopTracking(); $('#btn-run').textContent = '再開'; $('#sim').disabled = false; $('#sim-speed').disabled = false;
   }
-  $('#btn-run').onclick = () => { if (run.running) pauseRun(); else { startRun(); if (!NV.open && !$('#sim').checked) openNav(); } };   // スタートすると、自分視点のナビ表示になる
+  $('#btn-run').onclick = () => { if (run.running) pauseRun(); else { startRun(); if (settings.autoNav && !NV.open && !$('#sim').checked) openNav(); } };   // スタートすると、自分視点のナビ表示になる
   $('#btn-quit').onclick = async () => {
     const force = $('#btn-quit').dataset.force; delete $('#btn-quit').dataset.force;
     if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめて、コース画面にもどりますか？', 'ここまでの記録は保存されません。', 'やめてもどる', 'このまま走る')) return;
@@ -915,7 +930,7 @@
   $('#run-back').onclick = () => $('#btn-quit').click();
   /* GPSで一周できたときだけ保存される */
   function completeRun() {
-    stopTracking(); closeNav();
+    stopTracking(); closeNav(); buzz([200, 80, 200, 80, 400]);
     const keep = []; let prev = null;
     for (const p of run.trail) { if (!prev || haversine(prev, p) >= 8) { keep.push([+p[0].toFixed(6), +p[1].toFixed(6)]); prev = p; } }
     const id = plan.pref.id, mk = plan.mk || cur;
@@ -1046,10 +1061,62 @@
     } catch (err) { toast('読み込めませんでした: ' + err.message); }
     e.target.value = '';
   };
-  $('#menu-reset').onclick = () => {
-    if (!confirm('すべての記録を消します。よろしいですか？')) return;
+  $('#menu-reset').onclick = async () => {
+    if (!await askConfirm('すべての記録を消しますか？', '走った記録と、前回作ったコースが消えます。元には戻せません。<br>（先に「記録を書き出す」でバックアップできます）', 'すべて消す', 'やめる')) return;
     save = blankSave(); persist(); cur ? renderBoard() : renderHome(); closeSheet();
   };
+
+  /* ---------- 設定画面 ---------- */
+  const tg = (key, label, note) => `<div class="set-row"><div class="set-l"><b>${label}</b>${note ? `<small>${note}</small>` : ''}</div><button class="switch" role="switch" data-set="${key}" aria-checked="${!!settings[key]}"><i></i></button></div>`;
+  const sg = (key, label, opts, val, note) => `<div class="set-row col"><div class="set-l"><b>${label}</b>${note ? `<small>${note}</small>` : ''}</div><div class="seg" data-seg="${key}">` + opts.map(([v, t]) => `<button data-v="${v}" class="${v === val ? 'on' : ''}">${t}</button>`).join('') + '</div></div>';
+  function openSettings() {
+    $('#menu').hidden = true;
+    const nm = (save.runs ? Object.keys(save.runs).length : 0) + (save.worldRuns ? Object.keys(save.worldRuns).length : 0);
+    $('#modal-card').innerHTML = `<div class="set-head"><h2>設定</h2><button id="set-close" class="link">とじる</button></div><div class="set-body">` +
+      `<h3>プロフィール</h3><div class="set-row col"><div class="set-l"><b>ニックネーム</b><small>ホームの見出しに表示されます（この端末の中だけに保存）</small></div><input id="set-nick" type="text" maxlength="12" placeholder="例: しゅう" value="${esc(settings.nick)}"></div>` +
+      `<h3>表示</h3>` + sg('theme', '画面の色', [['auto', '自動'], ['morning', '朝'], ['day', '昼'], ['evening', '夕方'], ['night', '夜']], Theme.mode(), '自動は、いる場所の日の出・日没に合わせて変わります') +
+      sg('units', '距離の単位', [['km', 'キロメートル'], ['mi', 'マイル']], settings.units) +
+      `<h3>音</h3>` + `<div class="set-row"><div class="set-l"><b>BGM</b></div><button class="switch" data-snd="bgm" role="switch" aria-checked="${Music.isOn()}"><i></i></button></div>` +
+      `<div class="set-row col"><div class="set-l"><b>BGMの音量</b></div><input id="set-vol" type="range" min="0" max="100" value="${Math.round(Music.volume() * 100)}"></div>` +
+      `<div class="set-row"><div class="set-l"><b>効果音</b><small>コース完成・ゴールの音</small></div><button class="switch" data-snd="sfx" role="switch" aria-checked="${Music.sfxIsOn()}"><i></i></button></div>` +
+      `<h3>走るとき</h3>` + tg('autoLocate', '開いたら現在地にピンを立てる', '位置情報の許可が必要です') + tg('autoNav', 'スタートで自分視点のナビ表示にする') +
+      tg('voice', '音声案内', '曲がり角の手前で読み上げます') + tg('vibrate', 'バイブレーション', 'ゴールとコースから外れたときに振動') + tg('keepAwake', '走っている間、画面を消さない') +
+      `<h3>記録のデータ</h3><div class="set-row"><div class="set-l"><b>走った記録</b><small>${nm}件</small></div></div>` +
+      `<div class="set-btns"><button id="set-list">記録一覧</button><button id="set-export">書き出す</button><button id="set-import">読み込む</button></div>` +
+      `<div class="set-btns"><button id="set-reset" class="danger">すべて消す</button></div>` +
+      `<h3>このアプリについて</h3><div class="set-about">はしって地図あつめ　バージョン ${APP_VER}<br>走った道をつないで、地図のピースを集めるアプリです。<br><br>` +
+      `位置情報は、コース作りと走行の記録のためだけに使い、この端末の外へは保存しません（地図と道路データの取得のために、場所の周辺の範囲を地図サービスへ送ります）。記録はこの端末のブラウザの中だけに保存されます。<br><br>` +
+      `地図データ © OpenStreetMap contributors ／ 航空写真 © Esri, Maxar, Earthstar Geographics ／ 地名 Nominatim ／ 3D地図 OpenFreeMap・MapLibre</div></div>`;
+    $('#modal').hidden = false;
+  }
+  $('#modal').addEventListener('click', e => {
+    const c = e.target.closest && e.target.closest('#modal-card'); if (!c || !c.querySelector('.set-body')) return;
+    const sw = e.target.closest('.switch');
+    if (sw) {
+      const on = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', String(on));
+      if (sw.dataset.snd === 'bgm') Music.setOn(on); else if (sw.dataset.snd === 'sfx') { Music.setSfx(on); if (on) Music.sfx('ok'); }
+      else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance('音声案内をオンにしました'); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
+      return;
+    }
+    const sb = e.target.closest('.seg button');
+    if (sb) {
+      const key = sb.parentElement.dataset.seg; sb.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === sb));
+      if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (cur && key === 'units') { refreshAfterUnits(); } }
+      return;
+    }
+    const id = e.target.id;
+    if (id === 'set-close') $('#modal').hidden = true;
+    else if (id === 'set-list') showList();
+    else if (id === 'set-export') $('#menu-export').click();
+    else if (id === 'set-import') $('#menu-import').click();
+    else if (id === 'set-reset') { $('#modal').hidden = true; $('#menu-reset').click(); }
+  });
+  $('#modal').addEventListener('input', e => {
+    if (e.target.id === 'set-nick') { settings.nick = e.target.value.trim().slice(0, 12); saveSettings(); if (!cur) renderHome(); }
+    else if (e.target.id === 'set-vol') Music.setVolume(e.target.value / 100);
+  });
+  function refreshAfterUnits() { if (typeof updateEst === 'function' && plan.pref) try { updateEst(); } catch (er) { /* なし */ } }
+  $('#menu-settings').onclick = openSettings;
 
   /* ---------- 起動 ---------- */
   if (!DEV) { $('.row.sim').hidden = true; $('#src option[value="demo"]').remove(); $('.src-row').hidden = true; }

@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=20261118c">
+<link rel="stylesheet" href="css/style.css?v=20261118e">
 </head>
 <body>
 <header id="top">
@@ -19,10 +19,11 @@
   <div id="counter" title="完成した数" hidden><b id="count-done">0</b> / <span id="count-total">47</span></div>
   <button id="btn-menu" class="icon" aria-label="メニュー">⋯</button>
   <div id="menu" hidden>
+    <button id="menu-settings">⚙ 設定</button>
     <button id="menu-list">記録一覧（走った場所）</button>
-    <button id="menu-export">記録を書き出す</button>
-    <button id="menu-import">記録を読み込む</button>
-    <button id="menu-reset" class="danger">すべて消す</button>
+    <button id="menu-export" hidden>記録を書き出す</button>
+    <button id="menu-import" hidden>記録を読み込む</button>
+    <button id="menu-reset" class="danger" hidden>すべて消す</button>
     <input type="file" id="file-import" accept="application/json" hidden>
   </div>
 </header>
@@ -174,12 +175,12 @@ window.addEventListener('error', function (e) {
 <script src="lib/leaflet/leaflet.js"></script>
 <script src="lib/maplibre/maplibre-gl.js"></script>
 <script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="js/theme.js?v=20261118c"></script>
-<script src="js/music.js?v=20261118c"></script>
-<script src="js/trivia.js?v=20261118c"></script>
-<script src="js/game.js?v=20261118c"></script>
-<script src="data/embedded.js?v=20261118c"></script>
-<script src="js/route.js?v=20261118c"></script>
-<script src="js/app.js?v=20261118c"></script>
+<script src="js/theme.js?v=20261118e"></script>
+<script src="js/music.js?v=20261118e"></script>
+<script src="js/trivia.js?v=20261118e"></script>
+<script src="js/game.js?v=20261118e"></script>
+<script src="data/embedded.js?v=20261118e"></script>
+<script src="js/route.js?v=20261118e"></script>
+<script src="js/app.js?v=20261118e"></script>
 </body>
 </html>

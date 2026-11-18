@@ -19,8 +19,8 @@
   const PATTERN = [0, 2, 1, 3, 2, 1, 3, 2];
 
   let ctx = null, master = null, fx = null, noise = null, timer = null;
-  let on = true, scene = 'calm', step = 0, nextT = 0, started = false;
-  try { const v = localStorage.getItem(KEY); if (v !== null) on = v === '1'; } catch (e) { /* 初期値のまま */ }
+  let on = true, scene = 'calm', step = 0, nextT = 0, started = false, vol = 1, sfxOn = true;
+  try { const v = localStorage.getItem(KEY); if (v !== null) on = v === '1'; const q = parseFloat(localStorage.getItem(KEY + '-vol')); if (q >= 0 && q <= 1) vol = q; sfxOn = localStorage.getItem(KEY + '-sfx') !== '0'; } catch (e) { /* 初期値のまま */ }
 
   function init() {
     if (ctx) return true;
@@ -92,7 +92,7 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t);
-    if (on) { if (ctx.state === 'suspended') ctx.resume(); master.gain.linearRampToValueAtTime(0.9, t + 0.8); startLoop(); }
+    if (on) { if (ctx.state === 'suspended') ctx.resume(); master.gain.linearRampToValueAtTime(0.9 * vol, t + 0.8); startLoop(); }
     else { master.gain.linearRampToValueAtTime(0, t + 0.4); setTimeout(() => { if (!on) { stopLoop(); ctx.suspend && ctx.suspend(); } }, 500); }
   }
   function updateButton() {
@@ -109,9 +109,14 @@
       applyOn(); updateButton(); return on;
     },
     scene(name) { if (SCENES[name]) scene = name; },
+    volume: () => vol,
+    setVolume(v) { vol = Math.max(0, Math.min(1, v)); try { localStorage.setItem(KEY + '-vol', String(vol)); } catch (e) { /* なし */ } if (ctx && on) { const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.9 * vol, t + 0.15); } },
+    sfxIsOn: () => sfxOn,
+    setSfx(b) { sfxOn = !!b; try { localStorage.setItem(KEY + '-sfx', b ? '1' : '0'); } catch (e) { /* なし */ } },
+    setOn(b) { if (b !== on) this.toggle(); },
     /* 効果音: done=完成のファンファーレ ok=コースができた */
     sfx(kind) {
-      if (!on || !ctx || ctx.state !== 'running') return;
+      if (!on || !sfxOn || !ctx || ctx.state !== 'running') return;
       const t = ctx.currentTime + 0.02;
       const seq = kind === 'done' ? [72, 76, 79, 84, 88] : [76, 83];
       seq.forEach((n, i) => { tone('triangle', midi(n), t + i * 0.11, 0.5, 0.12, 0.005, true); tone('sine', midi(n + 12), t + i * 0.11, 0.35, 0.04, 0.005, true); });
