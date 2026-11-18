@@ -650,25 +650,29 @@
     cancelAnimationFrame(v3raf); $('#view3d').hidden = true;
     if (v3) { try { v3.remove(); } catch (e) { /* なし */ } v3 = null; }
   }
+  let v3vis = {};
   function applyV3Style() {
-    if (!v3 || !v3.isStyleLoaded()) return;
-    const sat = v3style === 'sat';
-    if (v3.getLayer('esri')) v3.setLayoutProperty('esri', 'visibility', sat ? 'visible' : 'none');
-    if (v3.getLayer('osm')) v3.setLayoutProperty('osm', 'visibility', sat ? 'none' : 'visible');
-    for (const l of v3.getStyle().layers) {
-      if (['background', 'fill', 'line'].includes(l.type) && !l.id.startsWith('route')) {
-        try { v3.setLayoutProperty(l.id, 'visibility', sat ? 'none' : 'visible'); } catch (e) { /* なし */ }
-      }
-    }
     document.querySelectorAll('#v3-style button').forEach(b => b.classList.toggle('on', b.dataset.st === v3style));
+    if (!v3) return;
+    const sat = v3style === 'sat';
+    try {
+      if (v3.getLayer('esri')) v3.setLayoutProperty('esri', 'visibility', sat ? 'visible' : 'none');
+      if (v3.getLayer('osm')) v3.setLayoutProperty('osm', 'visibility', sat ? 'none' : 'visible');
+      for (const l of v3.getStyle().layers) {
+        if (['background', 'fill', 'line', 'fill-extrusion'].includes(l.type) && !l.id.startsWith('route') && l.id !== 'esri' && l.id !== 'osm') {
+          if (!(l.id in v3vis)) v3vis[l.id] = (l.layout && l.layout.visibility) || 'visible';
+          v3.setLayoutProperty(l.id, 'visibility', sat ? 'none' : v3vis[l.id]);
+        }
+      }
+    } catch (e) { /* 読み込み中は次の機会に反映 */ }
   }
-  $('#v3-style').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; v3style = b.dataset.st; applyV3Style(); });
+  $('#v3-style').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; v3style = b.dataset.st; applyV3Style(); if (v3) { v3.once('idle', applyV3Style); v3.triggerRepaint(); } });
   $('#v3-close').onclick = close3d;
   $('#v3-play').onclick = () => { v3play = !v3play; $('#v3-play').textContent = v3play ? '⏸' : '▶'; };
   $('#btn-3d').onclick = () => {
     const r = plan.routes[plan.sel]; if (!r) return;
     if (!window.maplibregl) return toast('3D表示を読み込めませんでした');
-    $('#view3d').hidden = false; v3msg('3D地図を読み込み中…'); v3play = true; $('#v3-play').textContent = '⏸'; v3t = 0;
+    v3vis = {}; $('#view3d').hidden = false; v3msg('3D地図を読み込み中…'); v3play = true; $('#v3-play').textContent = '⏸'; v3t = 0;
     const ll = toLL(r.pts.concat([r.pts[0]]), plan.lat0, plan.lon0).map(p => [p[1], p[0]]);
     const cum = [0]; for (let i = 1; i < ll.length; i++) cum.push(cum[i - 1] + haversine([ll[i - 1][1], ll[i - 1][0]], [ll[i][1], ll[i][0]]));
     const total = cum[cum.length - 1] || 1;
