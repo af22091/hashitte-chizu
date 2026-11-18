@@ -133,8 +133,8 @@
     cur = null; closeSheet(); show('home'); renderHome();
   }
   $('#btn-home').onclick = async () => {
-    if (mode === 'run' && run.tracker.progress > 0.05 && !await askConfirm('ホームにもどりますか？', 'ここまでの記録は保存されません。', 'もどる', 'このまま走る')) return;
-    if (mode === 'plan' && plan.routes.length && !await askConfirm('ホームにもどりますか？', '作ったコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', 'もどる', 'このまま続ける')) return;
+    if (mode === 'run' && run.tracker.progress > 0.05 && !await askConfirm('ホーム（日本・世界の選択）にもどりますか？', 'ここまでの記録は保存されません。', 'ホームにもどる', 'このまま走る')) return;
+    if (mode === 'plan' && plan.routes.length && !await askConfirm('ホーム（日本・世界の選択）にもどりますか？', 'いま表示しているコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', 'ホームにもどる', 'コースの画面にとどまる')) return;
     if (mode === 'run') $('#btn-quit').dataset.force = '1', $('#btn-quit').click();
     if (mode === 'plan') { clearCourse(); leaveMap(); }
     goHome();
@@ -326,6 +326,7 @@
     map.on('click', async e => { if (mode !== 'plan' || plan.busy) return; if (!await guardCourse()) return; plan.touched = true; setStart([e.latlng.lat, e.latlng.lng]); });
   }
 
+  const boardName = () => (cur === 'world' ? '世界地図' : '日本地図');
   /* ---------- 確認ダイアログ(まちがい防止) ---------- */
   function askConfirm(title, body, okLabel, cancelLabel) {
     return new Promise(res => {
@@ -342,7 +343,7 @@
   /* 作ったコースがあるとき、消える操作の前に確認する */
   async function guardCourse() {
     if (!plan.routes.length) return true;
-    const ok = await askConfirm('作ったコースが消えます', 'このまま進むと、いま表示しているコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', '消して進む', 'もどる');
+    const ok = await askConfirm('作ったコースが消えます', 'このまま進むと、いま表示しているコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', '消して進む', 'コースを残す');
     if (ok) clearCourse();
     return ok;
   }
@@ -376,6 +377,7 @@
     $('#panel-plan').classList.remove('compact'); $('#btn-opts').hidden = true;
     setStart(save.lastStart || DEFAULT_START, true);
     plan.touched = false; locateStart();
+    $('#plan-back').textContent = `← ${boardName()}にもどる`;
     updateEst(); refreshDraft();
   }
   /* 作ったコースの控え: 消してしまっても12時間は呼び戻せる */
@@ -444,7 +446,7 @@
       err => toast('現在地を取得できませんでした: ' + err.message), { enableHighAccuracy: true, timeout: 12000 });
   };
   $('#plan-back').onclick = async () => {
-    if (plan.routes.length && !await askConfirm('マップ画面にもどりますか？', '作ったコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', 'もどる', 'このまま続ける')) return;
+    if (plan.routes.length && !await askConfirm(`${boardName()}の画面にもどりますか？`, 'いま表示しているコースは消えます。<br>（あとで「前回作ったコース」から呼び戻せます）', `${boardName()}にもどる`, 'コースの画面にとどまる')) return;
     clearCourse(); leaveMap();
   };
   function leaveMap() {
@@ -905,7 +907,7 @@
   $('#btn-run').onclick = () => { if (run.running) pauseRun(); else { startRun(); if (!NV.open && !$('#sim').checked) openNav(); } };   // スタートすると、自分視点のナビ表示になる
   $('#btn-quit').onclick = async () => {
     const force = $('#btn-quit').dataset.force; delete $('#btn-quit').dataset.force;
-    if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめますか？', 'ここまでの記録は保存されません。', 'やめる', 'このまま走る')) return;
+    if (!force && run.tracker.progress > 0.05 && !await askConfirm('走るのをやめて、コース画面にもどりますか？', 'ここまでの記録は保存されません。', 'やめてもどる', 'このまま走る')) return;
     stopTracking(); closeNav(); runLayer.clearLayers(); mode = 'plan';
     $('#panel-run').hidden = true; $('#panel-plan').hidden = false;
     if (startMarker) startMarker.addTo(map); showRoutes();
