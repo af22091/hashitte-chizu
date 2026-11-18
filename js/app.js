@@ -152,8 +152,9 @@
       html += `<path class="piece${done ? ' done' : ''}${selectedId === p.id ? ' sel' : ''}" data-id="${p.id}" d="${p.d}"` +
         (done ? ` style="fill:${COLORS[p.color]}"` : '') + '/>';
     }
-    for (const p of prefs) html += `<text class="lab" data-lz="${p.lz || 1}" x="${p.label[0]}" y="${p.label[1]}">${p.short}</text>`;
+    for (const p of prefs) html += `<text class="lab" data-id="${p.id}" data-lz="${p.lz || 1}" x="${p.label[0]}" y="${p.label[1]}">${p.short}</text>`;
     $('#board').innerHTML = html;
+    labOrder = null;
     $('#count-done').textContent = Object.keys(runs).filter(id => byId[id]).length;
     $('#count-total').textContent = prefs.length;
     $('#top h1').textContent = MODES[cur].title; document.title = MODES[cur].title;
@@ -165,7 +166,38 @@
     svg.style.setProperty('--lab', (MODES[cur].font / Math.sqrt(z)).toFixed(2));
     svg.dataset.zoom = z.toFixed(2);
     svg.querySelectorAll('.lab').forEach(el => { el.style.display = z + 1e-6 >= +el.dataset.lz ? '' : 'none'; });
+    if (!declutterQ) declutterQ = requestAnimationFrame(declutter);
   }
+  /* 文字が重なるときは、大きい国から順に残して、重なる小さい国の名前は隠す(タップ・マウスを乗せると名前が出る) */
+  let labOrder = null, declutterQ = 0;
+  function declutter() {
+    declutterQ = 0;
+    const svg = $('#board'); if (!svg || !svg.isConnected) return;
+    if (!labOrder) {
+      const area = {};
+      svg.querySelectorAll('.piece').forEach(el => { try { const b = el.getBBox(); area[el.dataset.id] = b.width * b.height; } catch (e) { area[el.dataset.id] = 0; } });
+      labOrder = [...svg.querySelectorAll('.lab')].sort((a, b) => (area[b.dataset.id] || 0) - (area[a.dataset.id] || 0));
+    }
+    const vis = labOrder.filter(el => el.style.display !== 'none');
+    if (selectedId) vis.sort((a, b) => (b.dataset.id === selectedId) - (a.dataset.id === selectedId));
+    const rects = vis.map(el => el.getBoundingClientRect()), placed = [];
+    vis.forEach((el, i) => {
+      const r = rects[i], m = 2;
+      const hit = placed.some(q => r.left < q.right + m && r.right > q.left - m && r.top < q.bottom + m && r.bottom > q.top - m);
+      if (hit) el.style.display = 'none'; else placed.push(r);
+    });
+  }
+  /* マウスを乗せた国の名前を、ふきだしで出す */
+  const hoverTip = document.createElement('div'); hoverTip.id = 'hover-tip'; hoverTip.hidden = true; document.body.appendChild(hoverTip);
+  $('#board').addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || e.buttons) { hoverTip.hidden = true; return; }
+    const t = e.target.closest && e.target.closest('.piece');
+    if (!t) { hoverTip.hidden = true; return; }
+    const p = byId[t.dataset.id]; if (!p) { hoverTip.hidden = true; return; }
+    hoverTip.textContent = p.name || p.short; hoverTip.hidden = false;
+    hoverTip.style.left = Math.min(window.innerWidth - 150, e.clientX + 14) + 'px'; hoverTip.style.top = (e.clientY + 16) + 'px';
+  });
+  $('#board').addEventListener('pointerleave', () => { hoverTip.hidden = true; });
   function clampView() {
     view.w = Math.min(base.w, Math.max(base.w / 14, view.w)); view.h = view.w * base.h / base.w;
     view.x = Math.min(base.x + base.w - view.w, Math.max(base.x, view.x));

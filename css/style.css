@@ -364,3 +364,5 @@ body { transition: background-color .6s; }
 #loading { background: color-mix(in srgb, var(--sea) 88%, transparent); }
 html[data-tod="night"] #board .lab { fill: var(--ink); }
 html[data-tod="night"] #board .piece { filter: drop-shadow(1.5px 2px 0 rgba(0,0,0,.55)); }
+#hover-tip { position: fixed; z-index: 1300; pointer-events: none; background: var(--ink); color: #ffd84a; border-radius: 10px; padding: 6px 12px; font-weight: 900; font-size: 14px; box-shadow: 3px 3px 0 rgba(0,0,0,.3); }
+#hover-tip[hidden] { display: none; }
