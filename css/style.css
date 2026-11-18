@@ -392,3 +392,14 @@ html[data-tod="night"] #board .piece { filter: drop-shadow(1.5px 2px 0 rgba(0,0,
 .set-body .seg button { background: #fff; color: var(--ink); border: 0; border-radius: 0; transition: none; }
 .set-body .seg button.on { background: var(--ink); color: #ffd84a; }
 .set-row .set-l { text-align: left; }
+
+.home-quick { display: flex; gap: 12px; max-width: 900px; margin: 0 auto; padding: 0 20px 32px; }
+.home-quick button { flex: 1; padding: 14px; font-size: 16px; border-radius: 14px; background: #fff; }
+#top h1 { min-width: 0; }
+@media (max-width: 420px) {
+  #top { gap: 6px; padding-left: 8px; padding-right: 8px; }
+  #top button.icon { width: 36px; height: 36px; font-size: 17px; }
+  #top h1 { font-size: 16px; white-space: nowrap; }
+  #counter { padding: 4px 10px; } #counter b { font-size: 17px; }
+}
+@media (max-width: 420px) { #btn-music { display: none; } }

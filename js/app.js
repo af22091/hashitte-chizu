@@ -1116,7 +1116,7 @@
     else if (e.target.id === 'set-vol') Music.setVolume(e.target.value / 100);
   });
   function refreshAfterUnits() { if (typeof updateEst === 'function' && plan.pref) try { updateEst(); } catch (er) { /* なし */ } }
-  $('#menu-settings').onclick = openSettings;
+  $('#menu-settings').onclick = openSettings; $('#btn-settings').onclick = openSettings; $('#home-settings').onclick = openSettings; $('#home-list').onclick = showList;
 
   /* ---------- 起動 ---------- */
   if (!DEV) { $('.row.sim').hidden = true; $('#src option[value="demo"]').remove(); $('.src-row').hidden = true; }
