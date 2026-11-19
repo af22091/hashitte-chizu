@@ -500,9 +500,14 @@
     box.hidden = false; box.innerHTML = '<div class="muted">検索中…</div>'; $('#place-go').disabled = true;
     try {
       const c = map ? map.getCenter() : null;
-      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=' + I18N.lang + '&q=' + encodeURIComponent(q) + (c ? `&viewbox=${c.lng - 1},${c.lat + 1},${c.lng + 1},${c.lat - 1}` : '');
-      const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
+      const ask = async qq => {
+        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=' + I18N.lang + '&q=' + encodeURIComponent(qq) + (c ? `&viewbox=${c.lng - 1},${c.lat + 1},${c.lng + 1},${c.lat - 1}` : '');
+        const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
+      };
+      /* 登録名と完全に一致しないと出ないので、見つからなければ「えき・駅」を外した言い方でも探す(例: へいわだいえき → へいわだい) */
+      const tries = [q]; const q2 = q.replace(/[\s　]*(えき|エキ|駅)$/, '').trim(); if (q2 && q2 !== q) tries.push(q2, q2 + ' 駅');
+      let j = [];
+      for (const qq of tries) { j = await ask(qq); if (j.length) break; }
       box.innerHTML = j.length ? j.map((x, i) => `<button type="button" data-i="${i}"><b>${esc((x.display_name || '').split(',')[0])}</b><small>${esc((x.display_name || '').split(',').slice(1, 4).join(' '))}</small></button>`).join('') : '<div class="muted">見つかりませんでした。別の言葉でお試しください。</div>';
       box.onclick = async ev => {
         const b = ev.target.closest('button[data-i]'); if (!b) return; const x = j[+b.dataset.i], ll = [+x.lat, +x.lon];
