@@ -520,7 +520,8 @@
   }
   function startLoader() {
     $('#loader-shape').innerHTML = plan.pref ? outlineSvg(plan.pref.outline) : '';
-    tips = (window.TRIVIA_JP && cur === 'jp' && plan.pref && TRIVIA_JP[plan.pref.short] ? ['🗾 ' + TRIVIA_JP[plan.pref.short]] : []).concat(TIPS);
+    const TV = I18N.lang === 'en' ? window.TRIVIA_EN : window.TRIVIA_JP;
+    tips = (TV && cur === 'jp' && plan.pref && TV[plan.pref.short] ? ['🗾 ' + TV[plan.pref.short]] : []).concat(TIPS);
     $('#ld-title').textContent = (plan.pref ? plan.pref.name : '') + 'のコースを作っています';
     tipI = 0; $('#loader-tip').textContent = tips[0];
     clearInterval(tipTimer);
@@ -1182,6 +1183,7 @@
     else if (e.target.id === 'set-vol') Music.setVolume(e.target.value / 100);
   });
   function refreshAfterUnits() { if (typeof updateEst === 'function' && plan.pref) try { updateEst(); } catch (er) { /* なし */ } }
+  window.addEventListener('i18nchange', () => { if (!cur) renderHome(); if (!$('#modal').hidden && $('#modal-card .set-head')) openSettings(); });
   $('#menu-settings').onclick = openSettings; $('#btn-settings').onclick = openSettings; $('#home-list').onclick = showList;
 
   /* ---------- 起動 ---------- */

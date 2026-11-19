@@ -99,4 +99,3 @@ window.TRIVIA_EN = {
   '鹿児島': 'Capital: Kagoshima. Famous for Sakurajima volcano and sweet potatoes.',
   '沖縄': 'Capital: Naha. Known for goya champuru and shisa guardians.',
 };
-if (window.I18N && I18N.lang === 'en') window.TRIVIA_JP = window.TRIVIA_EN;

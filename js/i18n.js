@@ -151,31 +151,45 @@
   }
 
   const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+  const origText = new WeakMap(), origAttr = new WeakMap();          // 日本語にもどせるよう、変換前の文字を覚えておく
   function fixNode(n) {
-    if (n.nodeType === 3) { const v = n.nodeValue; if (JP.test(v)) { const o = tr(v); if (o !== v) n.nodeValue = o; } return; }
+    if (n.nodeType === 3) { const v = n.nodeValue; if (JP.test(v)) { const o = tr(v); if (o !== v) { origText.set(n, v); n.nodeValue = o; } } return; }
     if (n.nodeType !== 1) return;
     const tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE') return;
-    for (const a of ATTRS) { const v = n.getAttribute && n.getAttribute(a); if (v && JP.test(v)) n.setAttribute(a, tr(v)); }
+    for (const a of ATTRS) { const v = n.getAttribute && n.getAttribute(a); if (v && JP.test(v)) { const m = origAttr.get(n) || {}; m[a] = v; origAttr.set(n, m); n.setAttribute(a, tr(v)); } }
     for (let c = n.firstChild; c; c = c.nextSibling) fixNode(c);
   }
-  function start() {
-    document.documentElement.lang = 'en';
-    fixNode(document.documentElement);
+  function restoreNode(n) {                                            // English → 日本語(変換していない文字はそのまま)
+    if (n.nodeType === 3) { const o = origText.get(n); if (o != null) { n.nodeValue = o; origText.delete(n); } return; }
+    if (n.nodeType !== 1) return;
+    const m = origAttr.get(n); if (m) { for (const a of Object.keys(m)) n.setAttribute(a, m[a]); origAttr.delete(n); }
+    for (let c = n.firstChild; c; c = c.nextSibling) restoreNode(c);
+  }
+  let observing = false;
+  function ensureObserver() {
+    if (observing) return; observing = true;
     new MutationObserver(recs => {
+      if (lang !== 'en') return;
       for (const r of recs) {
         if (r.type === 'childList') r.addedNodes.forEach(fixNode);
         else if (r.type === 'characterData') fixNode(r.target);
-        else if (r.type === 'attributes') { const v = r.target.getAttribute(r.attributeName); if (v && JP.test(v)) r.target.setAttribute(r.attributeName, tr(v)); }
+        else if (r.type === 'attributes') { const v = r.target.getAttribute(r.attributeName); if (v && JP.test(v)) { const m = origAttr.get(r.target) || {}; m[r.attributeName] = v; origAttr.set(r.target, m); r.target.setAttribute(r.attributeName, tr(v)); } }
       }
     }).observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
   }
-  if (lang === 'en') { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start(); }
+  function apply() {
+    document.documentElement.lang = lang;
+    if (lang === 'en') { ensureObserver(); fixNode(document.documentElement); } else restoreNode(document.documentElement);
+  }
+  if (lang === 'en') { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply(); }
 
   root.I18N = {
     get lang() { return lang; },
     tr, nm,
-    setLang(l) { try { localStorage.setItem(KEY, l); } catch (e) { /* なし */ } lang = l; location.reload(); },
-    names(list) { if (lang !== 'en') return; for (const p of list) if (p.en) { NAMES[p.name] = p.en; NAMES[p.short] = p.en; } },
+    setLang(l) {                                                        // ページを読み込み直さずに切り替える(BGMが途切れない)
+      if (l === lang) return; try { localStorage.setItem(KEY, l); } catch (e) { /* なし */ } lang = l; apply(); window.dispatchEvent(new Event('i18nchange'));
+    },
+    names(list) { for (const p of list) if (p.en) { NAMES[p.name] = p.en; NAMES[p.short] = p.en; } },
     speechLang() { return lang === 'en' ? 'en-US' : 'ja-JP'; },
   };
 })(window);
