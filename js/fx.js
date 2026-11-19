@@ -4,6 +4,7 @@
   'use strict';
   const reduceMQ = root.matchMedia ? root.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
   let enabled = true, last = { x: innerWidth / 2, y: innerHeight / 2 };
+  const CLIP = (root.CSS && CSS.supports && CSS.supports('overflow', 'clip')) ? 'clip' : 'hidden';
   const ok = () => enabled && !reduceMQ.matches;
 
   document.addEventListener('pointerdown', e => { last = { x: e.clientX, y: e.clientY }; }, true);
@@ -16,7 +17,7 @@
     const s = document.createElement('span'); s.className = 'ripple';
     s.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`;
     const po = b.style.position, ov = b.style.overflow;
-    if (getComputedStyle(b).position === 'static') b.style.position = 'relative'; b.style.overflow = 'hidden';
+    if (getComputedStyle(b).position === 'static') b.style.position = 'relative'; b.style.overflow = CLIP;   // hiddenだとボタンの最小幅が変わって、押した瞬間にレイアウトがずれる(clipなら変わらない)
     b.appendChild(s); setTimeout(() => { s.remove(); b.style.position = po; b.style.overflow = ov; }, 650);
   }, true);
 
