@@ -4,19 +4,21 @@
   'use strict';
   const KEY = 'hashitte-music-v1';
   const midi = n => 440 * Math.pow(2, (n - 69) / 12);
-  // 4小節のコード進行(C△7 → Am7 → F△7 → G6)。各和音は [ルート, 構成音...] のMIDIノート番号
+  // 8小節のコード進行(C → G/B → Am7 → Em7 → F → C/E → Dm7 → G7)。ほのぼのポップな明るい響き
   const CHORDS = [
-    { root: 36, tones: [48, 52, 55, 59] },
-    { root: 33, tones: [45, 48, 52, 55] },
-    { root: 41, tones: [45, 48, 52, 57] },
-    { root: 43, tones: [43, 47, 50, 52] },
+    { root: 36, tones: [60, 64, 67] }, { root: 31, tones: [59, 62, 67] }, { root: 33, tones: [60, 64, 67, 69] }, { root: 40, tones: [59, 62, 67, 64] },
+    { root: 41, tones: [60, 65, 69] }, { root: 40, tones: [60, 64, 67] }, { root: 38, tones: [60, 65, 69, 62] }, { root: 43, tones: [59, 62, 65, 67] },
+  ];
+  // メロディ(オリジナル): 1小節 = 8分音符8つ。0は休み
+  const MELODY = [
+    76, 0, 79, 0, 76, 74, 72, 0,   74, 0, 71, 74, 79, 0, 74, 0,   76, 0, 72, 0, 69, 72, 76, 0,   79, 0, 76, 74, 76, 0, 0, 0,
+    77, 0, 81, 0, 77, 76, 72, 0,   76, 0, 79, 0, 84, 0, 79, 0,     77, 0, 74, 0, 77, 81, 77, 0,   79, 0, 77, 74, 71, 0, 74, 0,
   ];
   const SCENES = {
-    calm: { bpm: 84, pad: 0.05, arp: 0.5, bass: false, kick: 0, hat: false, clap: false, oct: 12 },
-    work: { bpm: 108, pad: 0.04, arp: 0.85, bass: true, kick: 2, hat: true, clap: false, oct: 12 },
-    run: { bpm: 140, pad: 0.035, arp: 1, bass: true, kick: 4, hat: true, clap: true, oct: 24 },
+    calm: { bpm: 90, mel: 0.075, pluck: 0.03, bass: 0.13, shake: 0.018, tick: 0.02, kick: 0, clap: false, spark: false },
+    work: { bpm: 106, mel: 0.07, pluck: 0.032, bass: 0.15, shake: 0.026, tick: 0.03, kick: 2, clap: false, spark: false },
+    run: { bpm: 124, mel: 0.07, pluck: 0.034, bass: 0.17, shake: 0.032, tick: 0.035, kick: 4, clap: true, spark: true },
   };
-  const PATTERN = [0, 2, 1, 3, 2, 1, 3, 2];
 
   let ctx = null, master = null, fx = null, noise = null, timer = null;
   let on = true, scene = 'calm', step = 0, nextT = 0, started = false, vol = 1, sfxOn = true;
@@ -46,15 +48,21 @@
     env(g, t, attack, peak, dur); o.connect(g); g.connect(master); if (send) g.connect(fx);
     o.start(t); o.stop(t + dur + 0.05);
   }
-  function pad(chord, t, dur, level) {
-    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1100; f.connect(master); f.connect(fx);
-    for (const n of chord.tones) {
-      for (const det of [-5, 5]) {
-        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'triangle'; o.frequency.value = midi(n); o.detune.value = det;
-        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(level / 3, t + dur * 0.3); g.gain.linearRampToValueAtTime(0.0001, t + dur);
-        o.connect(g); g.connect(f); o.start(t); o.stop(t + dur + 0.05);
-      }
-    }
+  function marimba(n, t, dur, peak) {              // やわらかい木琴/ベルのような音
+    const f = midi(n);
+    tone('sine', f, t, dur, peak, 0.003, true);
+    tone('triangle', f * 4, t, 0.09, peak * 0.35, 0.002, true);
+    tone('sine', f * 2, t, dur * 0.5, peak * 0.3, 0.003, true);
+  }
+  function pluck(n, t, peak) {                      // ウクレレのような軽いはじき
+    const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.value = midi(n); f.type = 'lowpass'; f.frequency.value = 2200;
+    env(g, t, 0.004, peak, 0.42); o.connect(f); f.connect(g); g.connect(master); g.connect(fx); o.start(t); o.stop(t + 0.5);
+  }
+  function bassNote(n, t, dur, peak) {              // ぽよんと弾むベース
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(midi(n) * 1.5, t); o.frequency.exponentialRampToValueAtTime(midi(n), t + 0.05);
+    env(g, t, 0.006, peak, dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
   }
   function kick(t, v) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine';
@@ -69,17 +77,17 @@
   function schedule() {
     const S = SCENES[scene], spb = 60 / S.bpm, e8 = spb / 2;
     while (nextT < ctx.currentTime + 0.35) {
-      const i = step % 32, bar = Math.floor(i / 8) % 4, k = i % 8, ch = CHORDS[bar], t = nextT;
-      if (k === 0) pad(ch, t, e8 * 8 + 0.4, S.pad);
-      if (Math.random() < S.arp) {
-        const note = ch.tones[PATTERN[k] % ch.tones.length] + S.oct;
-        tone('triangle', midi(note), t, 0.32, 0.055, 0.004, true);
-        if (scene === 'run' && k % 4 === 3) tone('sine', midi(note + 12), t, 0.2, 0.03, 0.004, true);
-      }
-      if (S.bass && (k === 0 || k === 4 || (scene === 'run' && k === 6))) tone('sine', midi(ch.root), t, e8 * 1.6, 0.16, 0.01, false);
-      if (S.kick && (k % 2 === 0) && (S.kick === 4 || k === 0 || k === 4)) kick(t, 0.32);
-      if (S.hat && k % 2 === 1) hit(t, 7000, scene === 'run' ? 0.05 : 0.03, 0.05);
-      if (S.clap && (k === 2 || k === 6)) hit(t, 1500, 0.07, 0.12);
+      const i = step % 64, bar = Math.floor(i / 8), k = i % 8, ch = CHORDS[bar];
+      const t = nextT + (k % 2 ? e8 * 0.16 : 0);       // 裏拍を少し遅らせて、弾むノリに
+      const m = MELODY[i];
+      if (m) marimba(m, t, k % 4 === 3 ? 0.3 : 0.5, S.mel);
+      if (S.spark && m && k % 2 === 0) marimba(m + 12, t + e8 * 0.5, 0.22, S.mel * 0.35);
+      if (k === 0 || k === 3 || k === 6) ch.tones.slice().sort((a, b) => a - b).forEach((n, j) => pluck(n - 12, t + j * 0.012, S.pluck * (k === 3 ? 0.8 : 1)));
+      if (k === 0 || k === 3 || k === 4) bassNote(ch.root + 12, t, e8 * 1.5, S.bass * (k === 3 ? 0.8 : 1));
+      if (S.kick && ((S.kick === 4 && k % 2 === 0) || k === 0 || k === 4)) kick(t, 0.2);
+      if (k % 2 === 1) hit(t, 6500, S.shake * 1.5, 0.05); else hit(t, 8000, S.shake, 0.04);
+      if (k === 2 || k === 6) tone('sine', 1250, t, 0.035, S.tick, 0.001, false);
+      if (S.clap && (k === 2 || k === 6)) hit(t, 1800, 0.05, 0.1);
       nextT += e8; step++;
     }
   }
@@ -118,8 +126,8 @@
     sfx(kind) {
       if (!on || !sfxOn || !ctx || ctx.state !== 'running') return;
       const t = ctx.currentTime + 0.02;
-      const seq = kind === 'done' ? [72, 76, 79, 84, 88] : [76, 83];
-      seq.forEach((n, i) => { tone('triangle', midi(n), t + i * 0.11, 0.5, 0.12, 0.005, true); tone('sine', midi(n + 12), t + i * 0.11, 0.35, 0.04, 0.005, true); });
+      const seq = kind === 'done' ? [72, 76, 79, 84, 79, 84, 88] : [79, 84];
+      seq.forEach((n, i) => marimba(n, t + i * 0.1, 0.6, 0.16));
     },
     refresh: updateButton,
   };

@@ -88,7 +88,7 @@
         if (!res.ok) throw new Error(m.file + ' ' + res.status);
         d = await res.json();
       }
-      DATAS[m.key] = { data: d, prefs: d.prefs, byId: Object.fromEntries(d.prefs.map(p => [p.id, p])) };
+      DATAS[m.key] = { data: d, prefs: d.prefs, byId: Object.fromEntries(d.prefs.map(p => [p.id, p])) }; I18N.names(d.prefs);
     }));
   }
   const prefOf = (mk, id) => DATAS[mk].byId[id];
@@ -299,7 +299,7 @@
   function openSheet(id) {
     selectedId = id; renderBoardSel();
     const p = byId[id], run = RUNS()[id], u = MODES[cur].unit;
-    let body = `<div class="sheet-title"><h2>${p.name}${p.en ? ` <small class="muted">${p.en}</small>` : ''}</h2><span class="stars" title="形の難しさ">${stars(p.level)}</span></div>`;
+    let body = `<div class="sheet-title"><h2>${p.name}${p.en && I18N.lang !== 'en' ? ` <small class="muted">${p.en}</small>` : ''}</h2><span class="stars" title="形の難しさ">${stars(p.level)}</span></div>`;
     if (run) {
       body += `<div class="sheet-body-row"><div class="trail-prev">${trailSvg(run.trail, COLORS[p.color], run.planned, 110)}</div>` +
         `<div class="facts" id="sh-facts">完成 ${fmtDate(run.date)}<br>距離 ${fmtKm(run.distanceM)}<br>時間 ${fmtTime(run.durationS)}<span id="sh-place">${placeHtml(run, cur + id)}</span>${run.demo ? '<br><span class="muted">（デモの記録）</span>' : ''}</div></div>` +
@@ -458,7 +458,7 @@
     box.hidden = false; box.innerHTML = '<div class="muted">検索中…</div>'; $('#place-go').disabled = true;
     try {
       const c = map ? map.getCenter() : null;
-      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=ja&q=' + encodeURIComponent(q) + (c ? `&viewbox=${c.lng - 1},${c.lat + 1},${c.lng + 1},${c.lat - 1}` : '');
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=' + I18N.lang + '&q=' + encodeURIComponent(q) + (c ? `&viewbox=${c.lng - 1},${c.lat + 1},${c.lng + 1},${c.lat - 1}` : '');
       const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       box.innerHTML = j.length ? j.map((x, i) => `<button type="button" data-i="${i}"><b>${esc((x.display_name || '').split(',')[0])}</b><small>${esc((x.display_name || '').split(',').slice(1, 4).join(' '))}</small></button>`).join('') : '<div class="muted">見つかりませんでした。別の言葉でお試しください。</div>';
@@ -808,7 +808,7 @@
     $('#nav-arrow').textContent = arrow; $('#nav-text').textContent = text;
     if (settings.voice && 'speechSynthesis' in window) {          // 音声案内: 曲がり角の60m手前と、ゴール間近で読み上げる
       const key = t ? (t.dist <= 60 ? text : null) : (text === 'もうすぐゴールです' ? text : null);
-      if (key && key !== NV.spoken) { NV.spoken = key; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(key.replace('m先', 'メートル先')); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (e) { /* なし */ } }
+      if (key && key !== NV.spoken) { NV.spoken = key; try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(I18N.lang === 'en' ? I18N.tr(key) : key.replace('m先', 'メートル先')); u.lang = I18N.speechLang(); speechSynthesis.speak(u); } catch (e) { /* なし */ } }
       if (!key) NV.spoken = null;
     }
     $('#nav-left').textContent = fmtKm(run.route.lengthM * (1 - run.tracker.progress));
@@ -1010,7 +1010,7 @@
     let ok = false;
     for (let i = 0; i < 3 && !ok; i++) {
       try {
-        const url = `${PLACE_URL}?format=jsonv2&addressdetails=1&zoom=16&accept-language=ja&lat=${c[0].toFixed(5)}&lon=${c[1].toFixed(5)}`;
+        const url = `${PLACE_URL}?format=jsonv2&addressdetails=1&zoom=16&accept-language=${I18N.lang}&lat=${c[0].toFixed(5)}&lon=${c[1].toFixed(5)}`;
         const res = await fetch(url, { headers: { Accept: 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const j = await res.json(); if (j.error) throw new Error(j.error);
@@ -1119,6 +1119,7 @@
     $('#modal-card').innerHTML = `<div class="set-head"><h2>設定</h2><button id="set-close" class="link">とじる</button></div><div class="set-body">` +
       `<h3>プロフィール</h3><div class="set-row col"><div class="set-l"><b>ニックネーム</b><small>ホームの見出しに表示されます（この端末の中だけに保存）</small></div><input id="set-nick" type="text" maxlength="12" placeholder="例: しゅう" value="${esc(settings.nick)}"></div>` +
       `<h3>表示</h3>` + sg('theme', '画面の色', [['auto', '自動'], ['morning', '朝'], ['day', '昼'], ['evening', '夕方'], ['night', '夜']], Theme.mode(), '自動は、いる場所の日の出・日没に合わせて変わります') +
+      sg('lang', '言語', [['ja', '日本語'], ['en', 'English']], I18N.lang) +
       sg('units', '距離の単位', [['km', 'キロメートル'], ['mi', 'マイル']], settings.units) +
       `<h3>音</h3>` + `<div class="set-row"><div class="set-l"><b>BGM</b></div><button class="switch" data-snd="bgm" role="switch" aria-checked="${Music.isOn()}"><i></i></button></div>` +
       `<div class="set-row col"><div class="set-l"><b>BGMの音量</b></div><input id="set-vol" type="range" min="0" max="100" value="${Math.round(Music.volume() * 100)}"></div>` +
@@ -1140,13 +1141,13 @@
     if (sw) {
       const on = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', String(on));
       if (sw.dataset.snd === 'bgm') Music.setOn(on); else if (sw.dataset.snd === 'sfx') { Music.setSfx(on); if (on) Music.sfx('ok'); }
-      else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'motion') FX.setEnabled(on); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance('音声案内をオンにしました'); u.lang = 'ja-JP'; speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
+      else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'motion') FX.setEnabled(on); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance(I18N.tr('音声案内をオンにしました')); u.lang = I18N.speechLang(); speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
       return;
     }
     const sb = e.target.closest('.seg button');
     if (sb) {
       const key = sb.parentElement.dataset.seg; sb.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === sb));
-      if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (cur && key === 'units') { refreshAfterUnits(); } }
+      if (key === 'lang') { I18N.setLang(sb.dataset.v); return; } else if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (cur && key === 'units') { refreshAfterUnits(); } }
       return;
     }
     const id = (e.target.closest('button') || e.target).id;

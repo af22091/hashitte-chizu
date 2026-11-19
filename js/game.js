@@ -1,6 +1,7 @@
 /* 待ち時間のミニゲーム(3種類): jump=ランナージャンプ / stop=ぴたっとストップ / mole=もぐらたたき */
 (function (root) {
   'use strict';
+  const T = x => (root.I18N ? root.I18N.tr(x) : x);
   const BEST = k => 'hashitte-game-best-' + k;
   const best = k => { try { return +localStorage.getItem(BEST(k)) || 0; } catch (e) { return 0; } };
   const saveBest = (k, v) => { if (v > best(k)) { try { localStorage.setItem(BEST(k), v); } catch (e) { /* なし */ } } };
@@ -12,7 +13,7 @@
   }
   function overlay(W, H, title, sub) {
     c.fillStyle = 'rgba(16,41,59,.68)'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.textAlign = 'center';
-    c.font = '700 18px sans-serif'; c.fillText(title, W / 2, H / 2 - 6); c.font = '13px sans-serif'; c.fillText(sub, W / 2, H / 2 + 20); c.textAlign = 'left';
+    c.font = '700 18px sans-serif'; c.fillText(T(title), W / 2, H / 2 - 6); c.font = '13px sans-serif'; c.fillText(T(sub), W / 2, H / 2 + 20); c.textAlign = 'left';
   }
 
   /* ---------- 1. ランナージャンプ ---------- */
@@ -36,7 +37,7 @@
       c.fillStyle = '#9fd0b5'; c.fillRect(0, GY + 4, W, H - GY);
       c.strokeStyle = '#fff'; c.lineWidth = 3; c.setLineDash([12, 10]); c.lineDashOffset = g.t * g.speed; c.beginPath(); c.moveTo(0, GY + 12); c.lineTo(W, GY + 12); c.stroke(); c.setLineDash([]);
       c.font = '26px sans-serif'; c.fillText('🏃', 32, GY - g.y); g.obs.forEach(o => c.fillText('🚧', o.x, GY + 2));
-      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.fillText(`${g.score}m  ベスト ${best('jump')}m`, 10, 20);
+      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.fillText(T(`${g.score}m  ベスト ${best('jump')}m`), 10, 20);
       if (g.over) overlay(W, H, `${g.score}m 走りました`, 'タップでもう一度');
     };
     raf = requestAnimationFrame(loop);
@@ -62,7 +63,7 @@
       const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
       if (!g.over) { g.x += g.dir * (120 + g.score * 9) * dt; if (g.x > X1) { g.x = X1; g.dir = -1; } if (g.x < X0) { g.x = X0; g.dir = 1; } }
       c.fillStyle = '#e9f1f6'; c.fillRect(0, 0, W, H);
-      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.textAlign = 'left'; c.fillText(`${g.score}てん  ベスト ${best('stop')}てん`, 8, 18);
+      c.fillStyle = '#1c1b22'; c.font = '700 13px sans-serif'; c.textAlign = 'left'; c.fillText(T(`${g.score}てん  ベスト ${best('stop')}てん`), 8, 18);
       c.textAlign = 'right'; c.fillText('❤'.repeat(Math.max(0, g.life)), W - 8, 18); c.textAlign = 'left';
       const TY = 120;
       c.fillStyle = '#c9d6df'; c.fillRect(X0 - 10, TY, X1 - X0 + 20, 6);
@@ -70,8 +71,8 @@
       c.fillStyle = '#2fa36b'; c.fillRect(g.zone.c - g.zone.w / 2, TY - 34, g.zone.w, 3);
       c.font = '22px sans-serif'; c.textAlign = 'center'; c.fillText('🚩', g.zone.c, TY - 40);
       c.font = '30px sans-serif'; c.save(); c.translate(g.x, TY - 4); c.scale(g.dir, 1); c.fillText('🏃', 0, 0); c.restore();
-      if (g.flash > now) { c.font = '700 16px sans-serif'; c.fillStyle = g.msg === 'ざんねん…' ? '#c9302c' : '#1fa971'; c.fillText(g.msg, W / 2, 62); }
-      else { c.font = '12px sans-serif'; c.fillStyle = '#6b7f8f'; c.fillText('画面をタップして、旗の枠の中で止めよう', W / 2, 165); }
+      if (g.flash > now) { c.font = '700 16px sans-serif'; c.fillStyle = g.msg === 'ざんねん…' ? '#c9302c' : '#1fa971'; c.fillText(T(g.msg), W / 2, 62); }
+      else { c.font = '12px sans-serif'; c.fillStyle = '#6b7f8f'; c.fillText(T('画面をタップして、旗の枠の中で止めよう'), W / 2, 165); }
       c.textAlign = 'left';
       if (g.over) overlay(W, H, `${g.score}てん でした`, 'タップでもう一度');
     };
@@ -99,7 +100,7 @@
         }
       }
       c.fillStyle = '#d9ecdf'; c.fillRect(0, 0, W, H);
-      c.fillStyle = '#1c1b22'; c.font = '700 14px sans-serif'; c.fillText(`${g.score}ひき   のこり ${left.toFixed(1)}秒   ベスト ${best('mole')}`, 8, 20);
+      c.fillStyle = '#1c1b22'; c.font = '700 14px sans-serif'; c.fillText(T(`${g.score}ひき   のこり ${left.toFixed(1)}秒   ベスト ${best('mole')}`), 8, 20);
       for (let i = 0; i < 9; i++) {
         const cx = (i % 3) * CELL + CELL / 2, cy = 30 + Math.floor(i / 3) * CELL + CELL / 2 + 8;
         c.fillStyle = '#7a5a3a'; c.beginPath(); c.ellipse(cx, cy + 18, 32, 13, 0, 0, 7); c.fill();
