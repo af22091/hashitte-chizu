@@ -136,8 +136,17 @@
       $('#board').querySelectorAll('.piece, .frame').forEach(el => { const q = el.getBBox(); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x + q.width); y1 = Math.max(y1, q.y + q.height); });
       const bb = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }; if (!(bb.width > 0 && bb.height > 0)) return;
       const px = bb.width * 0.012, py = bb.height * 0.012;
-      base = { x: bb.x - px, y: bb.y - py, w: bb.width + 2 * px, h: bb.height + 2 * py };
-      view = Object.assign({}, base); applyView();
+      const W0 = bb.width + 2 * px, H0 = bb.height + 2 * py;
+      // 画面の縦横比に合わせて表示範囲を作る(縦長のスマホでも、地図が小さく余白だらけにならない)
+      const r = $('#board').getBoundingClientRect(), a = (r.width > 50 && r.height > 50) ? r.width / r.height : innerWidth / Math.max(300, innerHeight - 200);
+      let bw = W0, bh = H0; if (W0 / H0 < a) bw = H0 * a; else bh = W0 / a;
+      base = { x: bb.x + bb.width / 2 - bw / 2, y: bb.y + bb.height / 2 - bh / 2, w: bw, h: bh };
+      view = Object.assign({}, base);
+      if (cur === 'world' && a < 0.9) {                     // 世界地図は縦長画面だと小さすぎるので、最初から拡大して中央(ヨーロッパ〜アジア)を見せる
+        const vw = W0 / 2.3, vh = vw / a;
+        view = { x: bb.x + bb.width * 0.56 - vw / 2, y: bb.y + bb.height * 0.5 - vh / 2, w: vw, h: vh };
+      }
+      applyView();
     } catch (e) { /* 元の表示範囲のまま */ }
   }
   function goHome() {
@@ -209,8 +218,9 @@
     hoverTip.style.left = Math.min(window.innerWidth - 150, e.clientX + 14) + 'px'; hoverTip.style.top = (e.clientY + 16) + 'px';
   });
   $('#board').addEventListener('pointerleave', () => { hoverTip.hidden = true; });
+  window.addEventListener('resize', () => { if (cur && $('#screen-board').classList.contains('active')) fitBase(); });
   function clampView() {
-    view.w = Math.min(base.w, Math.max(base.w / 14, view.w)); view.h = view.w * base.h / base.w;
+    view.w = Math.min(base.w, Math.max(base.w / 20, view.w)); view.h = view.w * base.h / base.w;
     view.x = Math.min(base.x + base.w - view.w, Math.max(base.x, view.x));
     view.y = Math.min(base.y + base.h - view.h * (view.w < base.w ? 0.6 : 1), Math.max(base.y, view.y));   // 拡大中は下に余白を許す(シートに隠れる端の県を見せるため)
   }
@@ -315,6 +325,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
     if (name === 'map') { ensureMap(); setTimeout(() => map.invalidateSize(), 50); }
     $('#btn-home').hidden = name === 'home';
+    if (name === 'board' && cur) requestAnimationFrame(() => fitBase());
     { const sc = $('#screen-' + name); if (sc) { if (name === 'map') FX.reveal(sc); else sc.classList.remove('enter'), void sc.offsetWidth, sc.classList.add('enter'); } }
     if (name !== 'map') Music.scene('calm');
     $('#counter').hidden = name === 'home';

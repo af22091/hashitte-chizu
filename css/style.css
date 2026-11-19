@@ -466,17 +466,19 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
 .place-res > button small { display: block; font-weight: 500; color: var(--ink2); margin-top: 2px; }
 .place-res > .muted { padding: 10px 12px; }
 
-/* ホーム: スマホでは日本・世界を横に並べ、設定・記録一覧まで1画面に収める */
+/* ホーム: スマホでも 日本・世界・設定・記録一覧 が1画面に収まる(縦並び、高さに合わせて縮める) */
+#board { width: 100%; }
 @media (max-width: 600px) {
-  .home-lead { font-size: 22px; padding: 14px 16px 2px; }
+  .home-lead { font-size: 22px; padding: 12px 16px 0; }
   .home-sub { font-size: 12.5px; padding: 0 16px 0; }
-  #home-cards { grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 14px 12px; }
-  .mode-card { padding: 8px; }
-  .mode-thumb { height: clamp(110px, 22dvh, 190px); padding: 6px; }
-  .mode-info { padding: 8px 4px 2px; }
+  #home-cards { grid-template-columns: 1fr; gap: 10px; padding: 10px 14px 10px; }
+  .mode-card { padding: 7px; }
+  .mode-thumb { height: clamp(56px, 16dvh, 150px); padding: 4px; }
+  .mode-info { padding: 6px 6px 2px; display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; }
   .mode-info h2 { font-size: 19px; }
-  .mode-info .mode-count { font-size: 14px; }
-  .mode-info .mode-count b { font-size: 26px; }
-  .home-quick { padding: 4px 14px max(20px, env(safe-area-inset-bottom)); gap: 10px; }
-  .home-quick button { padding: 16px 8px; font-size: 16px; }
+  .mode-info .mode-count { font-size: 14px; text-align: right; }
+  .mode-info .mode-count b { font-size: 22px; }
+  .mode-info .bar { grid-column: 1 / -1; margin-top: 4px; }
+  .home-quick { padding: 2px 14px max(16px, env(safe-area-inset-bottom)); gap: 10px; }
+  .home-quick button { padding: 14px 8px; font-size: 16px; }
 }
