@@ -214,8 +214,19 @@
     }
     const vis = labOrder.filter(el => el.style.display !== 'none');
     if (selectedId) vis.sort((a, b) => (b.dataset.id === selectedId) - (a.dataset.id === selectedId));
-    const rects = vis.map(el => el.getBoundingClientRect()), placed = [];
-    vis.forEach((el, i) => {
+    /* ① 国の形に文字が収まらないときは、まず小さくして、それでも入らなければ隠す */
+    const pieceEl = {}; svg.querySelectorAll('.piece').forEach(el => { pieceEl[el.dataset.id] = el; });
+    vis.forEach(el => {
+      el.style.fontSize = ''; const pe = pieceEl[el.dataset.id]; if (!pe) return;
+      const pr = pe.getBoundingClientRect(); let lr = el.getBoundingClientRect();
+      const ratio = Math.min((pr.width * 0.94) / (lr.width || 1), (pr.height * 0.94) / (lr.height || 1));
+      if (ratio >= 1) return;
+      if (ratio < 0.62) { el.style.display = 'none'; return; }
+      el.style.fontSize = 'calc(var(--lab, 8) * 1px * ' + ratio.toFixed(3) + ')';
+    });
+    const vis2 = vis.filter(el => el.style.display !== 'none');
+    const rects = vis2.map(el => el.getBoundingClientRect()), placed = [];
+    vis2.forEach((el, i) => {
       const r = rects[i], m = 2;
       const hit = placed.some(q => r.left < q.right + m && r.right > q.left - m && r.top < q.bottom + m && r.bottom > q.top - m);
       if (hit) el.style.display = 'none'; else placed.push(r);

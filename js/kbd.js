@@ -10,6 +10,7 @@
   const T = x => (root.I18N ? root.I18N.tr(x) : x);
   let mode = 'system', layout = 'flick', el = null, input = null, cand = () => [], hideTimer = 0;
 
+  const DEL = '⌫';
   const kata = s => s.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
   function insert(text) {
     if (!input) return; const a = input.selectionStart ?? input.value.length, b = input.selectionEnd ?? a;
@@ -51,7 +52,9 @@
     const mk = (cls, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kk ' + cls; b.textContent = label; tapOn(b, fn); return b; };
     if (layout === 'flick') {
       const col0 = document.createElement('div'); col0.className = 'col0';
-      col0.append(mk('fn', 'ABC', () => { layout = 'qwerty'; build(); show(); }));
+      const move = d => () => { if (!input) return; const n = Math.max(0, Math.min(input.value.length, (input.selectionStart ?? 0) + d)); input.setSelectionRange(n, n); };
+      col0.append(mk('fn big', 'ABC', () => { layout = 'qwerty'; build(); show(); }), mk('fn big', '◀', move(-1)), mk('fn big', '▶', move(1)),
+        mk('fn clr', T('全消し'), () => { if (!input) return; input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }));
       const grid = document.createElement('div'); grid.className = 'grid';
       ORDER.forEach(i => {
         if (i === null) { grid.appendChild(mk('fn', '小゛゜', modifier)); return; }
@@ -65,17 +68,18 @@
         grid.appendChild(b);
       });
       const col4 = document.createElement('div'); col4.className = 'col4';
-      col4.append(mk('fn', '⌫', back), mk('fn', T('空白'), () => insert('　')), mk('fn go', T('検索'), enter));
+      col4.append(mk('fn big', DEL, back), mk('fn', T('空白'), () => insert('　')), mk('fn go', T('検索'), enter));
       body.append(col0, grid, col4);
     } else {
       QROWS.forEach((r, ri) => {
         const row = document.createElement('div'); row.className = 'qrow r' + ri;
+        if (ri === 3) row.appendChild(mk('q', '-', () => insert('-')));
         [...r].forEach(c => row.appendChild(mk('q', c, () => insert(c))));
-        if (ri === 3) row.appendChild(mk('fn', '⌫', back));
+        if (ri === 3) row.appendChild(mk('fn big del', DEL, back));
         body.appendChild(row);
       });
       const last = document.createElement('div'); last.className = 'qrow last';
-      last.append(mk('fn', 'あ', () => { layout = 'flick'; build(); show(); }), mk('q sp', T('空白'), () => insert(' ')), mk('fn go', T('検索'), enter));
+      last.append(mk('fn big', 'あ', () => { layout = 'flick'; build(); show(); }), mk('q sp', '', () => insert(' ')), mk('fn go', T('検索'), enter));
       body.appendChild(last);
     }
     function showPop(b, set, d) {

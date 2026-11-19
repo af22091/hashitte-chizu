@@ -517,4 +517,14 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
 .kbd-pop { position: absolute; width: 52px; height: 52px; margin-left: -26px; display: grid; place-items: center; background: var(--ink); color: #fff; border-radius: 12px; font-size: 28px; font-weight: 900; pointer-events: none; z-index: 2; }
 .kbd-pop[hidden] { display: none; }
 .kbd-body .col0 { grid-template-rows: repeat(4, 1fr); }
-.kbd-cand { min-height: 40px; } .kbd-cand.empty::after { content: ''; display: block; height: 32px; }
+
+/* キーボードの整列・アイコン拡大 */
+.kbd-cand { min-height: 38px; padding-bottom: 6px; } .kbd-cand .kc { min-height: 32px; }
+.kk.big { font-size: 26px; font-weight: 900; } .kk.clr { background: #d9d4c4; font-size: 14px; }
+.kbd-body .col4 .go { font-size: 17px; }
+.kbd-body.qwerty { --u: calc((100vw - 12px - 36px) / 10); }
+.qrow { display: flex; gap: 4px; justify-content: center; }
+.qrow .kk { flex: 0 0 var(--u); width: var(--u); min-height: 48px; }
+.qrow.r2 { padding: 0 calc(var(--u) / 2 + 2px); }
+.qrow.r3 { justify-content: flex-start; } .qrow.r3 .kk.big.del { flex: 1 1 auto; width: auto; }
+.qrow.last .kk { flex: 0 0 auto; } .qrow.last .kk.sp { flex: 1 1 auto; } .qrow.last .fn { width: calc(var(--u) * 2.2); }
