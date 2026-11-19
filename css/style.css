@@ -482,3 +482,14 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
   .home-quick { padding: 2px 14px max(16px, env(safe-area-inset-bottom)); gap: 10px; }
   .home-quick button { padding: 14px 8px; font-size: 16px; }
 }
+/* きろく(統計) */
+.sum-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 8px; }
+.sum-stats > div { background: #fff3b8; border: 2px solid var(--ink); border-radius: 12px; padding: 8px 2px; text-align: center; }
+.sum-stats b { display: block; font-size: 16px; font-weight: 900; line-height: 1.2; }
+.sum-stats small { display: block; font-size: 10.5px; color: var(--ink2); margin-top: 2px; }
+.stat-bar { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12.5px; margin-top: 8px; text-align: left; }
+.stat-bar b { font-weight: 800; } .stat-bar .bar { grid-column: 1 / -1; height: 8px; background: repeating-linear-gradient(90deg, #d9d4c4 0 8px, transparent 8px 13px); border-radius: 4px; overflow: hidden; }
+.stat-bar .bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--route) 0 8px, transparent 8px 13px); }
+.stat-h { margin: 14px 0 0; font-size: 13px; text-align: left; color: var(--ink2); }
+#home-list small { margin-left: 4px; font-weight: 500; opacity: .75; font-size: 13px; }
+.home-quick #home-list { flex: 1; }

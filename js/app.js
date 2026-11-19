@@ -109,6 +109,7 @@
     return html + '</svg>';
   }
   function renderHome() {
+    renderHomeStat();
     $('.home-lead').textContent = settings.nick ? `${settings.nick}さん、どの地図を走る？` : 'どの地図を走る？';
     $('#home-cards').innerHTML = Object.values(MODES).map(m => {
       const D = DATAS[m.key], n = Object.keys(runsOf(m.key)).filter(id => D.byId[id]).length, tot = D.prefs.length;
@@ -1061,12 +1062,30 @@
       delete runsOf(mk)[id]; persist(); if (cur === mk) renderBoard(); else if (!cur) renderHome(); $('#modal').hidden = true; closeSheet(); toast('記録を消しました');
     };
   }
+  /* きろく: 合計の成績(距離・回数・完成数・連続日数)と、走った場所つきの一覧 */
+  function computeStats() {
+    let m = 0, secs = 0, count = 0, done = 0; const days = new Set(), key = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    for (const mo of Object.values(MODES)) for (const [id, r] of Object.entries(runsOf(mo.key))) {
+      if (!DATAS[mo.key].byId[id]) continue; done++; count++; m += r.distanceM || 0; secs += r.durationS || 0; days.add(key(new Date(r.date)));
+    }
+    let streak = 0, d = new Date(); if (!days.has(key(d))) d.setDate(d.getDate() - 1);
+    while (days.has(key(d))) { streak++; d.setDate(d.getDate() - 1); }
+    return { km: m / 1000, secs, count, done, streak };
+  }
+  function renderHomeStat() { const st = computeStats(), el = $('#home-stat'); if (el) el.textContent = st.count ? `${kmTxt(st.km, 1)} ・ ${st.count}回` : ''; }
   /* 記録一覧(国・地域をまたいで、走った場所つきで一覧) */
   function showList() {
     const items = [];
     for (const m of Object.values(MODES)) for (const [id, r] of Object.entries(runsOf(m.key))) if (DATAS[m.key].byId[id]) items.push({ mk: m.key, id, r, p: DATAS[m.key].byId[id] });
     items.sort((a, b) => b.r.date.localeCompare(a.r.date));
-    $('#modal-card').innerHTML = `<h2>記録一覧</h2><div class="muted">${items.length}件</div>` +
+    $('#modal-card').innerHTML = `<h2>きろく</h2>` + (() => {
+        const st = computeStats(), JP_KM = 3000, EARTH = 40075, pct = (v, t) => Math.min(100, v / t * 100);
+        return `<div class="sum-stats"><div><b>${kmTxt(st.km, 1)}</b><small>合計距離</small></div><div><b>${st.count}回</b><small>走った回数</small></div>` +
+          `<div><b>${st.done}</b><small>完成した数</small></div><div><b>${st.streak}日</b><small>連続日数</small></div></div>` +
+          `<div class="stat-bar"><span>日本縦断 ${kmTxt(JP_KM, 0)}</span><b>${pct(st.km, JP_KM).toFixed(1)}%</b><div class="bar"><i style="width:${pct(st.km, JP_KM)}%"></i></div></div>` +
+          `<div class="stat-bar"><span>地球一周 ${kmTxt(EARTH, 0)}</span><b>${pct(st.km, EARTH).toFixed(2)}%</b><div class="bar"><i style="width:${pct(st.km, EARTH)}%"></i></div></div>` +
+          `<h3 class="stat-h">${items.length}件の記録</h3>`;
+      })() +
       (items.length ? `<div class="rec-list">` + items.map(({ mk, id, r, p }) =>
         `<div class="rec-wrap" data-key="${mk}:${id}" style="--i:${items.findIndex(x => x.id === id && x.mk === mk)}"><button class="rec-del" aria-label="削除">削除</button><button class="rec" data-key="${mk}:${id}"><span class="rec-trail">${trailSvg(r.trail, COLORS[p.color], null, 56)}</span>` +
         `<span class="rec-main"><b>${p.name}</b><small>${MODES[mk].home} ・ ${fmtDate(r.date)} ・ ${fmtKm(r.distanceM)}</small>` +
@@ -1129,7 +1148,7 @@
       tg('voice', '音声案内', '曲がり角の手前で読み上げます') + tg('vibrate', 'バイブレーション', 'ゴールとコースから外れたときに振動') + tg('keepAwake', '走っている間、画面を消さない') +
       `<h3>見た目</h3>` + tg('motion', 'アニメーション', '波紋・紙吹雪・切り替えの動き') +
       `<h3>記録のデータ</h3><div class="set-row"><div class="set-l"><b>走った記録</b><small>${nm}件</small></div></div>` +
-      `<div class="set-btns"><button id="set-list"><span>記録一覧</span></button><button id="set-export"><span>書き出す</span></button><button id="set-import"><span>読み込む</span></button></div>` +
+      `<div class="set-btns"><button id="set-list"><span>きろく</span></button><button id="set-export"><span>書き出す</span></button><button id="set-import"><span>読み込む</span></button></div>` +
       `<div class="set-btns"><button id="set-reset" class="danger">すべて消す</button></div>` +
       `<h3>このアプリについて</h3><div class="set-about">はしって地図あつめ　バージョン ${APP_VER}<br>走った道をつないで、地図のピースを集めるアプリです。<br><br>` +
       `位置情報は、コース作りと走行の記録のためだけに使い、この端末の外へは保存しません（地図と道路データの取得のために、場所の周辺の範囲を地図サービスへ送ります）。記録はこの端末のブラウザの中だけに保存されます。<br><br>` +
@@ -1163,7 +1182,7 @@
     else if (e.target.id === 'set-vol') Music.setVolume(e.target.value / 100);
   });
   function refreshAfterUnits() { if (typeof updateEst === 'function' && plan.pref) try { updateEst(); } catch (er) { /* なし */ } }
-  $('#menu-settings').onclick = openSettings; $('#btn-settings').onclick = openSettings; $('#home-settings').onclick = openSettings; $('#home-list').onclick = showList;
+  $('#menu-settings').onclick = openSettings; $('#btn-settings').onclick = openSettings; $('#home-list').onclick = showList;
 
   /* ---------- 起動 ---------- */
   if (!DEV) { $('.row.sim').hidden = true; $('#src option[value="demo"]').remove(); $('.src-row').hidden = true; }
