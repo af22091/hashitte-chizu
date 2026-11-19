@@ -354,7 +354,7 @@
   /* ---------- 画面の切り替え ---------- */
   let map = null, planLayer = null, runLayer = null, startMarker = null;
   /* ピンを「パネルに隠れていない見える範囲」の真ん中に置く(少し引き気味の縮尺) */
-  const START_ZOOM = 15;
+  const START_ZOOM = 16;
   function viewAt(ll, z) {
     map.setView(ll, z || START_ZOOM, { animate: false });
     const pn = document.querySelector('#screen-map .panel:not([hidden])'), mr = $('#map').getBoundingClientRect();
