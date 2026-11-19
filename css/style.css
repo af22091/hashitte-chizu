@@ -517,3 +517,4 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
 .kbd-pop { position: absolute; width: 52px; height: 52px; margin-left: -26px; display: grid; place-items: center; background: var(--ink); color: #fff; border-radius: 12px; font-size: 28px; font-weight: 900; pointer-events: none; z-index: 2; }
 .kbd-pop[hidden] { display: none; }
 .kbd-body .col0 { grid-template-rows: repeat(4, 1fr); }
+.kbd-cand { min-height: 40px; } .kbd-cand.empty::after { content: ''; display: block; height: 32px; }

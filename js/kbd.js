@@ -32,14 +32,23 @@
     hide();
   }
 
+  /* ボタンの反応は「押して離した」で処理する(clickだと、フォーカスを守る処理と干渉して取りこぼすことがある) */
+  function tapOn(b, fn) {
+    let armed = false;
+    b.addEventListener('pointerdown', () => { armed = true; });
+    b.addEventListener('pointerleave', () => { armed = false; }); b.addEventListener('pointercancel', () => { armed = false; });
+    b.addEventListener('pointerup', () => { if (!armed) return; armed = false; fn(); keepFocus(); });
+    b.addEventListener('click', e => e.preventDefault());
+  }
+  function keepFocus() { if (input && document.activeElement !== input) { try { input.focus({ preventScroll: true }); } catch (e) { /* なし */ } } }
   function build() {
     if (el) el.remove();
     el = document.createElement('div'); el.id = 'kbd'; el.setAttribute('data-notr', ''); el.hidden = true;
-    el.addEventListener('pointerdown', e => { e.preventDefault(); clearTimeout(hideTimer); });          // 入力欄からフォーカスを外さない
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(ev => el.addEventListener(ev, e => { if (e.cancelable) e.preventDefault(); }, { passive: false }));   // 入力欄からフォーカスを外さない
     const bar = document.createElement('div'); bar.className = 'kbd-cand'; el.appendChild(bar);
     const body = document.createElement('div'); body.className = 'kbd-body ' + layout; el.appendChild(body);
     const pop = document.createElement('div'); pop.className = 'kbd-pop'; pop.hidden = true; el.appendChild(pop);
-    const mk = (cls, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kk ' + cls; b.textContent = label; b.addEventListener('click', fn); return b; };
+    const mk = (cls, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kk ' + cls; b.textContent = label; tapOn(b, fn); return b; };
     if (layout === 'flick') {
       const col0 = document.createElement('div'); col0.className = 'col0';
       col0.append(mk('fn', 'ABC', () => { layout = 'qwerty'; build(); show(); }));
@@ -77,9 +86,10 @@
   }
   function renderCand() {
     if (!el) return; const bar = el.querySelector('.kbd-cand'); bar.textContent = '';
-    if (!input || input.id !== 'search') { bar.hidden = true; return; }
-    const list = cand(input.value) || []; bar.hidden = !list.length;
-    list.slice(0, 8).forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kc'; b.textContent = c.label; b.addEventListener('click', () => { input.value = c.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); hide(); }); bar.appendChild(b); });
+    if (!input || input.id !== 'search') { bar.hidden = true; setH(); return; }
+    const list = cand(input.value) || []; bar.hidden = false; bar.classList.toggle('empty', !list.length);
+    list.slice(0, 8).forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kc'; b.textContent = c.label; tapOn(b, () => { input.value = c.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); hide(); }); bar.appendChild(b); });
+    setH();
   }
   function setH() { const h = el && !el.hidden ? Math.round(el.getBoundingClientRect().height) : 0; document.documentElement.style.setProperty('--kbd', h + 'px'); document.documentElement.classList.toggle('kbd-on', h > 0); }
   function show() { if (!el) build(); el.hidden = false; renderCand(); requestAnimationFrame(() => { setH(); try { input && input.scrollIntoView({ block: 'center' }); } catch (e) { /* なし */ } }); }
@@ -89,7 +99,7 @@
     const t = e.target; if (mode === 'system' || !t.matches || !t.matches(TARGETS)) return;
     input = t; clearTimeout(hideTimer); show();
   });
-  document.addEventListener('focusout', e => { if (e.target.matches && e.target.matches(TARGETS)) hideTimer = setTimeout(hide, 120); });
+  document.addEventListener('pointerdown', e => { if (!el || el.hidden) return; if (e.target.closest && (e.target.closest('#kbd') || e.target.closest(TARGETS))) return; hide(); }, true);
   document.addEventListener('input', e => { if (input && e.target === input) renderCand(); });
 
   function apply() {
