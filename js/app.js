@@ -7,11 +7,24 @@
   const STORE_KEY = 'hashitte-nihon-v1';
   /* ---------- ユーザー設定(この端末の中だけに保存) ---------- */
   const SET_KEY = 'hashitte-settings-v1', APP_VER = '2026.11.18';
-  const SET_DEF = { nick: '', units: 'km', autoLocate: true, autoNav: true, keepAwake: true, vibrate: true, voice: false, motion: true };
+  const SET_DEF = { nick: '', units: 'km', autoLocate: true, autoNav: true, keepAwake: true, vibrate: true, voice: false, motion: true, kbd: 'system' };
   let settings = Object.assign({}, SET_DEF);
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) { /* 既定 */ }
   const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) { /* なし */ } };
   FX.setEnabled(settings.motion !== false);
+  /* 検索欄のキーボード: かなの読みから、県・国の候補を出す */
+  const PREF_YOMI = { '北海道': 'ほっかいどう', '青森': 'あおもり', '岩手': 'いわて', '宮城': 'みやぎ', '秋田': 'あきた', '山形': 'やまがた', '福島': 'ふくしま', '茨城': 'いばらき', '栃木': 'とちぎ', '群馬': 'ぐんま', '埼玉': 'さいたま', '千葉': 'ちば', '東京': 'とうきょう', '神奈川': 'かながわ', '新潟': 'にいがた', '富山': 'とやま', '石川': 'いしかわ', '福井': 'ふくい', '山梨': 'やまなし', '長野': 'ながの', '岐阜': 'ぎふ', '静岡': 'しずおか', '愛知': 'あいち', '三重': 'みえ', '滋賀': 'しが', '京都': 'きょうと', '大阪': 'おおさか', '兵庫': 'ひょうご', '奈良': 'なら', '和歌山': 'わかやま', '鳥取': 'とっとり', '島根': 'しまね', '岡山': 'おかやま', '広島': 'ひろしま', '山口': 'やまぐち', '徳島': 'とくしま', '香川': 'かがわ', '愛媛': 'えひめ', '高知': 'こうち', '福岡': 'ふくおか', '佐賀': 'さが', '長崎': 'ながさき', '熊本': 'くまもと', '大分': 'おおいた', '宮崎': 'みやざき', '鹿児島': 'かごしま', '沖縄': 'おきなわ' };
+  const WORLD_YOMI = { 'アメリカ合衆国': 'あめりかがっしゅうこく', '中華人民共和国': 'ちゅうかじんみんきょうわこく', 'コンゴ民主共和国': 'こんごみんしゅきょうわこく', 'モンゴル国': 'もんごるこく', '南アフリカ共和国': 'みなみあふりかきょうわこく', 'マリ共和国': 'まりきょうわこく', '南スーダン': 'みなみすーだん', '中央アフリカ共和国': 'ちゅうおうあふりかきょうわこく', 'タイ王国': 'たいおうこく', '日本': 'にほん', 'コンゴ共和国': 'こんごきょうわこく', '朝鮮民主主義人民共和国': 'ちょうせんみんしゅしゅぎじんみんきょうわこく', '大韓民国': 'だいかんみんこく', '西サハラ': 'にしさはら', 'アラブ首長国連邦': 'あらぶしゅちょうこくれんぽう', 'ドミニカ共和国': 'どみにかきょうわこく', '中華民国': 'ちゅうかみんこく', '赤道ギニア': 'せきどうぎにあ', '北マケドニア': 'きたまけどにあ', 'フォークランド諸島': 'ふぉーくらんどしょとう', 'コソボ共和国': 'こそぼきょうわこく', 'ソロモン諸島': 'そろもんしょとう', '東ティモール': 'ひがしてぃもーる', '北キプロス・トルコ共和国': 'きたきぷろすとるこきょうわこく' };
+  Kbd.setCandidates(q => {
+    q = (q || '').trim(); if (!q || !cur || !DATAS[cur]) return [];
+    const k = Kbd.kata(q), lq = q.toLowerCase(), out = [];
+    for (const p of DATAS[cur].prefs) {
+      const yomi = Kbd.kata(cur === 'jp' ? (PREF_YOMI[p.short] || '') : (WORLD_YOMI[p.name] || p.name));
+      if (p.name.includes(q) || (p.en && p.en.toLowerCase().includes(lq)) || (yomi && yomi.startsWith(k)) || (cur === 'world' && Kbd.kata(p.name).startsWith(k))) out.push({ label: I18N.lang === 'en' && p.en ? p.en : p.name, value: p.name });
+    }
+    return out;
+  });
+  Kbd.setMode(settings.kbd);
   const U = () => (settings.units === 'mi' ? { f: 0.621371, n: 'mi' } : { f: 1, n: 'km' });
   const kmTxt = (km, d = 1) => (km * U().f).toFixed(d) + U().n;
   const buzz = p => { if (settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch (e) { /* なし */ } };
@@ -288,6 +301,13 @@
       || prefs.find(p => p.name.toLowerCase().includes(q) || (p.en || '').toLowerCase().includes(q));
     if (hit) { focusPref(hit); $('#search').blur(); } else toast('見つかりませんでした');
   }
+  /* キーボード対応: 入力欄に合わせた専用キーボード(検索キー・自動大文字/変換なし)を出し、キーボードで下の画面が隠れないようにする */
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'set-nick') e.target.blur(); });
+  document.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('#search, #place-q, #set-nick')) setTimeout(() => { try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (x) { /* なし */ } }, 350); });
+  if (window.visualViewport) {
+    const vv = window.visualViewport, upd = () => document.documentElement.style.setProperty('--kb', Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) + 'px');
+    vv.addEventListener('resize', upd); vv.addEventListener('scroll', upd); upd();
+  }
   $('#search').addEventListener('change', doSearch);
   $('#search').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
@@ -456,6 +476,7 @@
   /* 場所の検索(OpenStreetMap Nominatim)→ 結果をタップでスタート地点に */
   $('#place-form').addEventListener('submit', async e => {
     e.preventDefault(); const q = $('#place-q').value.trim(), box = $('#place-res'); if (!q) return;
+    $('#place-q').blur();                                  // 検索したらキーボードを閉じて、結果が見えるようにする
     box.hidden = false; box.innerHTML = '<div class="muted">検索中…</div>'; $('#place-go').disabled = true;
     try {
       const c = map ? map.getCenter() : null;
@@ -1137,9 +1158,10 @@
     $('#menu').hidden = true;
     const nm = (save.runs ? Object.keys(save.runs).length : 0) + (save.worldRuns ? Object.keys(save.worldRuns).length : 0);
     $('#modal-card').innerHTML = `<div class="set-head"><h2>設定</h2><button id="set-close" class="link">とじる</button></div><div class="set-body">` +
-      `<h3>プロフィール</h3><div class="set-row col"><div class="set-l"><b>ニックネーム</b><small>ホームの見出しに表示されます（この端末の中だけに保存）</small></div><input id="set-nick" type="text" maxlength="12" placeholder="例: しゅう" value="${esc(settings.nick)}"></div>` +
+      `<h3>プロフィール</h3><div class="set-row col"><div class="set-l"><b>ニックネーム</b><small>ホームの見出しに表示されます（この端末の中だけに保存）</small></div><input id="set-nick" type="text" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="12" placeholder="例: しゅう" value="${esc(settings.nick)}"></div>` +
       `<h3>表示</h3>` + sg('theme', '画面の色', [['auto', '自動'], ['morning', '朝'], ['day', '昼'], ['evening', '夕方'], ['night', '夜']], Theme.mode(), '自動は、いる場所の日の出・日没に合わせて変わります') +
       sg('lang', '言語', [['ja', '日本語'], ['en', 'English']], I18N.lang) +
+      sg('kbd', '入力キーボード', [['system', '端末のもの'], ['flick', 'フリック'], ['qwerty', 'QWERTY']], settings.kbd, 'アプリ内のキーボードで検索欄に入力します') +
       sg('units', '距離の単位', [['km', 'キロメートル'], ['mi', 'マイル']], settings.units) +
       `<h3>音</h3>` + `<div class="set-row"><div class="set-l"><b>BGM</b></div><button class="switch" data-snd="bgm" role="switch" aria-checked="${Music.isOn()}"><i></i></button></div>` +
       `<div class="set-row col"><div class="set-l"><b>BGMの音量</b></div><input id="set-vol" type="range" min="0" max="100" value="${Math.round(Music.volume() * 100)}"></div>` +
@@ -1168,7 +1190,7 @@
     const sb = e.target.closest('.seg button');
     if (sb) {
       const key = sb.parentElement.dataset.seg; sb.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === sb));
-      if (key === 'lang') { I18N.setLang(sb.dataset.v); return; } else if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (cur && key === 'units') { refreshAfterUnits(); } }
+      if (key === 'lang') { I18N.setLang(sb.dataset.v); return; } else if (key === 'theme') Theme.setMode(sb.dataset.v); else { settings[key] = sb.dataset.v; saveSettings(); if (key === 'kbd') Kbd.setMode(sb.dataset.v); if (cur && key === 'units') { refreshAfterUnits(); } }
       return;
     }
     const id = (e.target.closest('button') || e.target).id;

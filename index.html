@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="lib/leaflet/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=20261120h">
+<link rel="stylesheet" href="css/style.css?v=20261120j">
 </head>
 <body>
 <header id="top">
@@ -40,7 +40,7 @@
   <!-- ① パズル盤 -->
   <section id="screen-board" class="screen">
     <div id="board-tools">
-      <input id="search" type="search" list="search-list" autocomplete="off" placeholder="名前で探す">
+      <input id="search" type="search" list="search-list" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" placeholder="名前で探す">
       <datalist id="search-list"></datalist>
       <button id="z-out" aria-label="縮小">−</button><button id="z-in" aria-label="拡大">＋</button><button id="z-reset">全体</button>
     </div>
@@ -62,7 +62,7 @@
         <span id="plan-est" class="muted"></span>
       </div>
       <div class="opt search-row">
-        <form id="place-form" role="search"><input id="place-q" type="search" placeholder="場所を検索（駅・住所・公園など）" autocomplete="off" enterkeyhint="search"><button id="place-go" type="submit">検索</button></form>
+        <form id="place-form" role="search"><input id="place-q" type="search" name="q" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="場所を検索（駅・住所・公園など）"><button id="place-go" type="submit">検索</button></form>
         <div id="place-res" class="place-res" hidden></div>
       </div>
       <div class="opt here-row">
@@ -180,14 +180,15 @@ window.addEventListener('error', function (e) {
 <script src="lib/leaflet/leaflet.js"></script>
 <script src="lib/maplibre/maplibre-gl.js"></script>
 <script src="lib/maplibre/leaflet-maplibre-gl.js"></script>
-<script src="js/i18n.js?v=20261120h"></script>
-<script src="js/theme.js?v=20261120h"></script>
-<script src="js/music.js?v=20261120h"></script>
-<script src="js/trivia.js?v=20261120h"></script>
-<script src="js/game.js?v=20261120h"></script>
-<script src="data/embedded.js?v=20261120h"></script>
-<script src="js/route.js?v=20261120h"></script>
-<script src="js/fx.js?v=20261120h"></script>
-<script src="js/app.js?v=20261120h"></script>
+<script src="js/i18n.js?v=20261120j"></script>
+<script src="js/theme.js?v=20261120j"></script>
+<script src="js/music.js?v=20261120j"></script>
+<script src="js/trivia.js?v=20261120j"></script>
+<script src="js/game.js?v=20261120j"></script>
+<script src="data/embedded.js?v=20261120j"></script>
+<script src="js/route.js?v=20261120j"></script>
+<script src="js/fx.js?v=20261120j"></script>
+<script src="js/kbd.js?v=20261120j"></script>
+<script src="js/app.js?v=20261120j"></script>
 </body>
 </html>

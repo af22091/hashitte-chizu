@@ -69,7 +69,7 @@
     '距離の単位': 'Distance unit', 'キロメートル': 'Kilometers', 'マイル': 'Miles', '音': 'Sound', 'BGMの音量': 'Music volume', '効果音': 'Sound effects', 'コース完成・ゴールの音': 'Sounds for finishing a course or reaching the goal', 'ボタンの音': 'Button sounds', '押したときの、やわらかい「ぽん」という音': 'A soft “pop” when you tap a button',
     '走るとき': 'While running', '開いたら現在地にピンを立てる': 'Place the pin at my location on open', '位置情報の許可が必要です': 'Needs location permission', 'スタートで自分視点のナビ表示にする': 'Use navigation view when starting',
     '音声案内': 'Voice guidance', '曲がり角の手前で読み上げます': 'Reads out before turns', 'バイブレーション': 'Vibration', 'ゴールとコースから外れたときに振動': 'Vibrate at the goal and when you leave the course', '走っている間、画面を消さない': 'Keep screen on while running',
-    '見た目': 'Appearance', 'アニメーション': 'Animations', '波紋・紙吹雪・切り替えの動き': 'Ripples, confetti and transitions', '言語': 'Language', '記録のデータ': 'Record data', '走った記録': 'Runs recorded', '書き出す': 'Export', '読み込む': 'Import',
+    '見た目': 'Appearance', 'アニメーション': 'Animations', '波紋・紙吹雪・切り替えの動き': 'Ripples, confetti and transitions', '言語': 'Language', '入力キーボード': 'Search keyboard', '端末のもの': 'Device', 'フリック': 'Flick', 'アプリ内のキーボードで検索欄に入力します': 'Type in search boxes with an in-app keyboard.', '空白': 'space', '記録のデータ': 'Record data', '走った記録': 'Runs recorded', '書き出す': 'Export', '読み込む': 'Import',
     'このアプリについて': 'About', '走った道をつないで、地図のピースを集めるアプリです。': 'An app where your runs connect into lines and collect map pieces.',
     '位置情報は、コース作りと走行の記録のためだけに使い、この端末の外へは保存しません（地図と道路データの取得のために、場所の周辺の範囲を地図サービスへ送ります）。記録はこの端末のブラウザの中だけに保存されます。': 'Location is used only to build courses and record runs, and is never stored off this device (the area around a place is sent to map services to fetch maps and roads). Records are saved only in this browser.',
     '地図データ © OpenStreetMap contributors ／ 航空写真 © Esri, Maxar, Earthstar Geographics ／ 地名 Nominatim ／ 3D地図 OpenFreeMap・MapLibre': 'Map data © OpenStreetMap contributors / Imagery © Esri, Maxar, Earthstar Geographics / Place names: Nominatim / 3D map: OpenFreeMap, MapLibre',
@@ -155,7 +155,7 @@
   function fixNode(n) {
     if (n.nodeType === 3) { const v = n.nodeValue; if (JP.test(v)) { const o = tr(v); if (o !== v) { origText.set(n, v); n.nodeValue = o; } } return; }
     if (n.nodeType !== 1) return;
-    const tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE') return;
+    const tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE' || (n.hasAttribute && n.hasAttribute('data-notr'))) return;
     for (const a of ATTRS) { const v = n.getAttribute && n.getAttribute(a); if (v && JP.test(v)) { const m = origAttr.get(n) || {}; m[a] = v; origAttr.set(n, m); n.setAttribute(a, tr(v)); } }
     for (let c = n.firstChild; c; c = c.nextSibling) fixNode(c);
   }

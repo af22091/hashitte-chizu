@@ -493,3 +493,26 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
 .stat-h { margin: 14px 0 0; font-size: 13px; text-align: left; color: var(--ink2); }
 #home-list small { margin-left: 4px; font-weight: 500; opacity: .75; font-size: 13px; }
 .home-quick #home-list { flex: 1; }
+/* 入力欄: 16px未満だとiPhoneで拡大されるので16px以上にする。キーボードが出ている間は画面下のパネルを持ち上げる */
+#search, #place-q, #set-nick { font-size: 16px; }
+.panel { transition: transform .2s ease; }
+.panel { transform: translateY(calc(-1 * max(var(--kb, 0px), var(--kbd, 0px)))); }
+
+/* アプリ内キーボード */
+#kbd { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1600; background: #e9e6da; border-top: 3px solid var(--ink); padding: 6px 6px max(8px, env(safe-area-inset-bottom)); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+#kbd[hidden] { display: none; }
+.kbd-cand { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 6px; }
+.kbd-cand[hidden] { display: none; }
+.kc { flex: none; padding: 7px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #fff; font-size: 15px; font-weight: 800; }
+.kk { border: 2px solid var(--ink); background: #fff; border-radius: 10px; font-size: 20px; font-weight: 800; padding: 0; box-shadow: 0 2px 0 var(--ink); min-height: 48px; touch-action: none; }
+.kk.fn { background: #d9d4c4; font-size: 15px; } .kk.go { background: var(--route); color: #fff; }
+.kbd-body.flick { display: grid; grid-template-columns: 62px 1fr 68px; gap: 6px; }
+.kbd-body .col0, .kbd-body .col4 { display: grid; gap: 6px; grid-auto-rows: 1fr; }
+.kbd-body .col4 .go { grid-row: span 2; }
+.kbd-body .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.kbd-body .grid .kk { min-height: 52px; }
+.kbd-body.qwerty { display: grid; gap: 6px; }
+.qrow { display: flex; gap: 4px; justify-content: center; } .qrow .kk { flex: 1; min-width: 0; font-size: 18px; text-transform: none; }
+.qrow.last .kk.sp { flex: 4; } .qrow.last .fn { flex: 1.3; }
+.kbd-pop { position: absolute; width: 52px; height: 52px; margin-left: -26px; display: grid; place-items: center; background: var(--ink); color: #fff; border-radius: 12px; font-size: 28px; font-weight: 900; pointer-events: none; z-index: 2; }
+.kbd-pop[hidden] { display: none; }
