@@ -353,9 +353,18 @@
 
   /* ---------- 画面の切り替え ---------- */
   let map = null, planLayer = null, runLayer = null, startMarker = null;
+  /* ピンを「パネルに隠れていない見える範囲」の真ん中に置く(少し引き気味の縮尺) */
+  const START_ZOOM = 14;
+  function viewAt(ll, z) {
+    map.setView(ll, z || START_ZOOM, { animate: false });
+    const pn = document.querySelector('#screen-map .panel:not([hidden])'), mr = $('#map').getBoundingClientRect();
+    if (!pn) return; const pr = pn.getBoundingClientRect();
+    if (window.innerWidth >= 760) map.panBy([-Math.max(0, pr.right - mr.left) / 2, 0], { animate: false });
+    else map.panBy([0, Math.max(0, mr.bottom - pr.top) / 2], { animate: false });
+  }
   function show(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
-    if (name === 'map') { ensureMap(); setTimeout(() => map.invalidateSize(), 50); }
+    if (name === 'map') { ensureMap(); setTimeout(() => { map.invalidateSize(); if (plan && plan.start && !plan.routes.length) viewAt(plan.start); }, 60); }
     $('#btn-home').hidden = name === 'home';
     if (name === 'board' && cur) requestAnimationFrame(() => fitBase());
     { const sc = $('#screen-' + name); if (sc) { if (name === 'map') FX.reveal(sc); else sc.classList.remove('enter'), void sc.offsetWidth, sc.classList.add('enter'); } }
@@ -378,7 +387,7 @@
     map.on('baselayerchange', e => { try { localStorage.setItem('hashitte-basemap4', e.name); } catch (err) { /* なし */ } });
     planLayer = L.layerGroup().addTo(map); runLayer = L.layerGroup().addTo(map);
     const s = save.lastStart || DEFAULT_START;
-    map.setView(s, 15);
+    map.setView(s, START_ZOOM);
     map.on('click', async e => { if (mode !== 'plan' || plan.busy) return; if (!await guardCourse()) return; plan.touched = true; setStart([e.latlng.lat, e.latlng.lng]); });
   }
 
@@ -470,7 +479,7 @@
       });
     } else startMarker.setLatLng(ll);
     if (!startMarker._map) startMarker.addTo(map);
-    if (recenter) map.setView(ll, 15);
+    if (recenter) viewAt(ll);
   }
   function updateEst() {
     const p = plan.pref; if (!p) return;
@@ -499,7 +508,7 @@
         const b = ev.target.closest('button[data-i]'); if (!b) return; const x = j[+b.dataset.i], ll = [+x.lat, +x.lon];
         if (plan.routes.length && !await guardCourse()) return;
         if (plan.busy) return; plan.touched = true;
-        setStart(ll, true); map.setView(ll, 15); box.hidden = true; toast('スタートを設定しました');
+        setStart(ll, true); viewAt(ll); box.hidden = true; toast('スタートを設定しました');
       };
     } catch (er) { box.innerHTML = '<div class="muted">検索できませんでした。通信を確認してもう一度お試しください。</div>'; }
     finally { $('#place-go').disabled = false; }
