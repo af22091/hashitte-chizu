@@ -2,7 +2,7 @@
    検索欄(#search, #place-q)にだけ使う。端末のキーボードは出さない(inputmode="none")。 */
 (function (root) {
   'use strict';
-  const TARGETS = '#search, #place-q';
+  const TARGETS = '#search, #place-q, #set-nick';
   const KANA = [['あ', 'い', 'う', 'え', 'お'], ['か', 'き', 'く', 'け', 'こ'], ['さ', 'し', 'す', 'せ', 'そ'], ['た', 'ち', 'つ', 'て', 'と'], ['な', 'に', 'ぬ', 'ね', 'の'], ['は', 'ひ', 'ふ', 'へ', 'ほ'], ['ま', 'み', 'む', 'め', 'も'], ['や', '（', 'ゆ', '）', 'よ'], ['ら', 'り', 'る', 'れ', 'ろ'], ['わ', 'を', 'ん', 'ー', '〜'], ['、', '。', '？', '！', '…']];
   const ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, null, 9, 10];            // 3列×4行(null=小゛゜キー)
   const CYCLES = ['あぁ', 'いぃ', 'うぅ', 'えぇ', 'おぉ', 'かが', 'きぎ', 'くぐ', 'けげ', 'こご', 'さざ', 'しじ', 'すず', 'せぜ', 'そぞ', 'ただ', 'ちぢ', 'てで', 'とど', 'はばぱ', 'ひびぴ', 'ふぶぷ', 'へべぺ', 'ほぼぽ', 'つっづ', 'やゃ', 'ゆゅ', 'よょ', 'わゎ'].map(s => [...s]);
@@ -68,7 +68,7 @@
         grid.appendChild(b);
       });
       const col4 = document.createElement('div'); col4.className = 'col4';
-      col4.append(mk('fn big', DEL, back), mk('fn', T('空白'), () => insert('　')), mk('fn go', T('検索'), enter));
+      col4.append(mk('fn big', DEL, back), mk('fn', T('空白'), () => insert('　')), mk('fn go', T(input && input.id === 'set-nick' ? '完了' : '検索'), enter));
       body.append(col0, grid, col4);
     } else {
       QROWS.forEach((r, ri) => {
@@ -79,7 +79,7 @@
         body.appendChild(row);
       });
       const last = document.createElement('div'); last.className = 'qrow last';
-      last.append(mk('fn big', 'あ', () => { layout = 'flick'; build(); show(); }), mk('q sp', '', () => insert(' ')), mk('fn go', T('検索'), enter));
+      last.append(mk('fn big', 'あ', () => { layout = 'flick'; build(); show(); }), mk('q sp', '', () => insert(' ')), mk('fn go', T(input && input.id === 'set-nick' ? '完了' : '検索'), enter));
       body.appendChild(last);
     }
     function showPop(b, set, d) {
@@ -99,6 +99,7 @@
   function show() { if (!el) build(); el.hidden = false; renderCand(); requestAnimationFrame(() => { setH(); try { input && input.scrollIntoView({ block: 'center' }); } catch (e) { /* なし */ } }); }
   function hide() { if (el) el.hidden = true; setH(); }
 
+  document.addEventListener('pointerdown', e => { const t = e.target; if (mode !== 'system' && t.matches && t.matches(TARGETS)) t.inputMode = 'none'; }, true);   // あとから作られる入力欄(設定のニックネーム)も、フォーカス前に端末キーボードを止める
   document.addEventListener('focusin', e => {
     const t = e.target; if (mode === 'system' || !t.matches || !t.matches(TARGETS)) return;
     input = t; clearTimeout(hideTimer); show();

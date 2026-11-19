@@ -528,3 +528,4 @@ html.no-motion *, html.no-motion *::before, html.no-motion *::after { animation:
 .qrow.r2 { padding: 0 calc(var(--u) / 2 + 2px); }
 .qrow.r3 { justify-content: flex-start; } .qrow.r3 .kk.big.del { flex: 1 1 auto; width: auto; }
 .qrow.last .kk { flex: 0 0 auto; } .qrow.last .kk.sp { flex: 1 1 auto; } .qrow.last .fn { width: calc(var(--u) * 2.2); }
+html.kbd-on #modal { padding-bottom: calc(var(--kbd, 0px) + 12px); } html.kbd-on #modal > * { max-height: calc(100dvh - var(--kbd, 0px) - 24px); overflow-y: auto; }

@@ -31,7 +31,7 @@
     'このコースで走る': 'Run this course', 'すべて消す': 'Erase all', 'のこり': 'Left', 'はやい': 'Fast', 'ふつう': 'Normal', 'ゆっくり': 'Slow', 'まっすぐ進む': 'Go straight',
     'やめる': 'Quit', 'コースを作っています': 'Creating your course', 'コースを作る': 'Create course', 'コースを見る': 'View course', 'シミュレーション走行（開発用）': 'Simulated run (dev)',
     'スタート': 'Start', 'デモ（疑似道路・ネット不要）': 'Demo (fake roads, no internet)', 'ナビ表示をとじる': 'Close navigation', '中': 'M', '大': 'L', '小': 'S',
-    '大きさ': 'Size', '実際の道路（OpenStreetMap）': 'Real roads (OpenStreetMap)', '時間': 'Time', '検索': 'Search', '準備中…': 'Getting ready…', '記録を書き出す': 'Export records',
+    '大きさ': 'Size', '実際の道路（OpenStreetMap）': 'Real roads (OpenStreetMap)', '時間': 'Time', '検索': 'Search', '完了': 'Done', '全消し': 'Clear', '準備中…': 'Getting ready…', '記録を書き出す': 'Export records',
     '記録を読み込む': 'Import records', '距離': 'Distance', '進み具合': 'Progress', '道路データ': 'Road data', '🎯 ぴたっと': '🎯 Stop it', '🏃 ジャンプ': '🏃 Jump', '🐹 もぐら': '🐹 Whack',
     '📍 現在地をスタートにする': '📍 Start from my location', '🛰 3D・航空写真で見る': '🛰 View in 3D / satellite', '🧭 ナビ表示': '🧭 Navigation',
     '場所を検索（駅・住所・公園など）': 'Search a place or station', '地図をタップして、好きな場所を指定することもできます': 'You can also tap the map to choose a start point.',
