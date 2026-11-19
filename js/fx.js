@@ -20,6 +20,12 @@
     b.appendChild(s); setTimeout(() => { s.remove(); b.style.position = po; b.style.overflow = ov; }, 650);
   }, true);
 
+  /* ボタンの音 */
+  document.addEventListener('pointerdown', e => {
+    const b = e.target.closest && e.target.closest('button:not(:disabled), .mode-card'); if (!b || !root.Music || !Music.tap) return;
+    Music.tap(b.classList.contains('primary'));
+  }, true);
+
   /* ② 紙吹雪: 完成のお祝い */
   function confetti(colors) {
     if (!ok()) return;

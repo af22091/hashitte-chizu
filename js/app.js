@@ -1124,6 +1124,7 @@
       `<h3>音</h3>` + `<div class="set-row"><div class="set-l"><b>BGM</b></div><button class="switch" data-snd="bgm" role="switch" aria-checked="${Music.isOn()}"><i></i></button></div>` +
       `<div class="set-row col"><div class="set-l"><b>BGMの音量</b></div><input id="set-vol" type="range" min="0" max="100" value="${Math.round(Music.volume() * 100)}"></div>` +
       `<div class="set-row"><div class="set-l"><b>効果音</b><small>コース完成・ゴールの音</small></div><button class="switch" data-snd="sfx" role="switch" aria-checked="${Music.sfxIsOn()}"><i></i></button></div>` +
+      `<div class="set-row"><div class="set-l"><b>ボタンの音</b><small>押したときの、やわらかい「ぽん」という音</small></div><button class="switch" data-snd="tap" role="switch" aria-checked="${Music.tapIsOn()}"><i></i></button></div>` +
       `<h3>走るとき</h3>` + tg('autoLocate', '開いたら現在地にピンを立てる', '位置情報の許可が必要です') + tg('autoNav', 'スタートで自分視点のナビ表示にする') +
       tg('voice', '音声案内', '曲がり角の手前で読み上げます') + tg('vibrate', 'バイブレーション', 'ゴールとコースから外れたときに振動') + tg('keepAwake', '走っている間、画面を消さない') +
       `<h3>見た目</h3>` + tg('motion', 'アニメーション', '波紋・紙吹雪・切り替えの動き') +
@@ -1140,7 +1141,7 @@
     const sw = e.target.closest('.switch');
     if (sw) {
       const on = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', String(on));
-      if (sw.dataset.snd === 'bgm') Music.setOn(on); else if (sw.dataset.snd === 'sfx') { Music.setSfx(on); if (on) Music.sfx('ok'); }
+      if (sw.dataset.snd === 'bgm') Music.setOn(on); else if (sw.dataset.snd === 'sfx') { Music.setSfx(on); if (on) Music.sfx('ok'); } else if (sw.dataset.snd === 'tap') { Music.setTap(on); if (on) Music.tap(false); }
       else { settings[sw.dataset.set] = on; saveSettings(); if (sw.dataset.set === 'motion') FX.setEnabled(on); if (sw.dataset.set === 'voice' && on && 'speechSynthesis' in window) { try { const u = new SpeechSynthesisUtterance(I18N.tr('音声案内をオンにしました')); u.lang = I18N.speechLang(); speechSynthesis.speak(u); } catch (er) { /* なし */ } } }
       return;
     }

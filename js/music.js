@@ -21,6 +21,8 @@
   };
 
   let ctx = null, master = null, fx = null, noise = null, timer = null;
+  let tapBus = null, tapStep = 0, tapOn = true;
+  try { tapOn = localStorage.getItem(KEY + '-tap') !== '0'; } catch (e) { /* 既定 */ }
   let on = true, scene = 'calm', step = 0, nextT = 0, started = false, vol = 1, sfxOn = true;
   try { const v = localStorage.getItem(KEY); if (v !== null) on = v === '1'; const q = parseFloat(localStorage.getItem(KEY + '-vol')); if (q >= 0 && q <= 1) vol = q; sfxOn = localStorage.getItem(KEY + '-sfx') !== '0'; } catch (e) { /* 初期値のまま */ }
 
@@ -130,9 +132,26 @@
     volume: () => vol,
     setVolume(v) { vol = Math.max(0, Math.min(1, v)); try { localStorage.setItem(KEY + '-vol', String(vol)); } catch (e) { /* なし */ } if (ctx && on) { const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.9 * vol, t + 0.15); } },
     sfxIsOn: () => sfxOn,
+    tapIsOn: () => tapOn,
+    setTap(b) { tapOn = !!b; try { localStorage.setItem(KEY + '-tap', b ? '1' : '0'); } catch (e) { /* なし */ } },
     setSfx(b) { sfxOn = !!b; try { localStorage.setItem(KEY + '-sfx', b ? '1' : '0'); } catch (e) { /* なし */ } },
     setOn(b) { if (b !== on) this.toggle(); },
     /* 効果音: done=完成のファンファーレ ok=コースができた */
+    /* ボタンを押した音: BGMがオフでも、設定の「ボタンの音」がオンなら鳴る。やわらかい木琴のような「ぽん」 */
+    tap(strong) {
+      if (!tapOn) return;
+      if (!ctx && !init()) return;
+      try {
+        if (ctx.state === 'suspended') ctx.resume();
+        if (!tapBus) { tapBus = ctx.createGain(); tapBus.gain.value = 0.55 * Math.max(0.35, vol); tapBus.connect(ctx.destination); }
+        const t = ctx.currentTime + 0.005, pent = [84, 86, 88, 91, 93], n = strong ? 91 : pent[(tapStep++ * 2 + Math.floor(Math.random() * 2)) % pent.length];
+        [[1, 0.22, 0.13], [2, 0.07, 0.07], [3.01, 0.02, 0.04]].forEach(([m, g, d]) => {
+          const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sine'; o.frequency.value = midi(n - 12) * m;
+          env(gg, t, 0.002, g, d + 0.04); o.connect(gg); gg.connect(tapBus); o.start(t); o.stop(t + d + 0.1);
+        });
+        if (strong) { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sine'; o.frequency.value = midi(96 - 12); env(gg, t + 0.07, 0.002, 0.16, 0.2); o.connect(gg); gg.connect(tapBus); o.start(t + 0.07); o.stop(t + 0.3); }
+      } catch (e) { /* 鳴らせなくても続行 */ }
+    },
     sfx(kind) {
       if (!on || !sfxOn || !ctx || ctx.state !== 'running') return;
       const t = ctx.currentTime + 0.02;

@@ -66,7 +66,7 @@
     // ---- 設定 ----
     'プロフィール': 'Profile', 'ニックネーム': 'Nickname', 'ホームの見出しに表示されます（この端末の中だけに保存）': 'Shown on the Home screen (saved only on this device)', '例: しゅう': 'e.g. Sam',
     '表示': 'Display', '画面の色': 'Color theme', '自動': 'Auto', '朝': 'Morning', '昼': 'Day', '夕方': 'Evening', '夜': 'Night', '自動は、いる場所の日の出・日没に合わせて変わります': 'Auto follows sunrise and sunset where you are.',
-    '距離の単位': 'Distance unit', 'キロメートル': 'Kilometers', 'マイル': 'Miles', '音': 'Sound', 'BGMの音量': 'Music volume', '効果音': 'Sound effects', 'コース完成・ゴールの音': 'Sounds for finishing a course or reaching the goal',
+    '距離の単位': 'Distance unit', 'キロメートル': 'Kilometers', 'マイル': 'Miles', '音': 'Sound', 'BGMの音量': 'Music volume', '効果音': 'Sound effects', 'コース完成・ゴールの音': 'Sounds for finishing a course or reaching the goal', 'ボタンの音': 'Button sounds', '押したときの、やわらかい「ぽん」という音': 'A soft “pop” when you tap a button',
     '走るとき': 'While running', '開いたら現在地にピンを立てる': 'Place the pin at my location on open', '位置情報の許可が必要です': 'Needs location permission', 'スタートで自分視点のナビ表示にする': 'Use navigation view when starting',
     '音声案内': 'Voice guidance', '曲がり角の手前で読み上げます': 'Reads out before turns', 'バイブレーション': 'Vibration', 'ゴールとコースから外れたときに振動': 'Vibrate at the goal and when you leave the course', '走っている間、画面を消さない': 'Keep screen on while running',
     '見た目': 'Appearance', 'アニメーション': 'Animations', '波紋・紙吹雪・切り替えの動き': 'Ripples, confetti and transitions', '言語': 'Language', '記録のデータ': 'Record data', '走った記録': 'Runs recorded', '書き出す': 'Export', '読み込む': 'Import',
