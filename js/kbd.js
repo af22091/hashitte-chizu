@@ -42,7 +42,7 @@
     const mk = (cls, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'kk ' + cls; b.textContent = label; b.addEventListener('click', fn); return b; };
     if (layout === 'flick') {
       const col0 = document.createElement('div'); col0.className = 'col0';
-      col0.append(mk('fn', 'ABC', () => { layout = 'qwerty'; build(); show(); }), mk('fn', '☆', () => insert('　')));
+      col0.append(mk('fn', 'ABC', () => { layout = 'qwerty'; build(); show(); }));
       const grid = document.createElement('div'); grid.className = 'grid';
       ORDER.forEach(i => {
         if (i === null) { grid.appendChild(mk('fn', '小゛゜', modifier)); return; }
