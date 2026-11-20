@@ -70,7 +70,7 @@ def main():
     # --- 沖縄は枠に入れて太平洋側へ(日本全体のバランスを良くする) ---
     mp = max(pieces[OKI].geoms, key=lambda p: p.area)
     c = mp.centroid
-    tgt = (134.0 * KX, 29.6)
+    tgt = (141.2 * KX, 31.0)
     pieces[OKI] = affinity.translate(affinity.scale(MultiPolygon([mp]), 1.6, 1.6, origin=(c.x, c.y)),
                                      tgt[0] - c.x, tgt[1] - c.y)
 
@@ -82,8 +82,8 @@ def main():
         col[n] = next((i for i in range(PALETTE_N) if i not in used), PALETTE_N - 1)
 
     out = {"viewBox": [0, 0, round((X1 - X0) * S, 1), round((Y1 - Y0) * S, 1)],
-           "inset": [round((132.6 * KX - X0) * S, 1), round((Y1 - 30.8) * S, 1),
-                     round(2.8 * KX * S, 1), round(2.4 * S, 1)],
+           "inset": [round((139.2 * KX - X0) * S, 1), round((Y1 - 33.0) * S, 1),
+                     round(3.4 * KX * S, 1), round(3.2 * S, 1)],
            "prefs": []}
     for i, f in enumerate(feats):
         n = f["properties"]["nam_ja"]
